@@ -40,6 +40,8 @@ cosmetic movement. Space toggles pause/resume when focus is outside a control.
 The **[Learning lab](https://quadrin.github.io/FlyHamlet/learn.html)** runs a separate,
 live two-letter benchmark with a supervised decoder and explicit key presses.
 Its protocol and limits are described in [Experiment 3](#experiment-3-two-letter-learning).
+The **[Phrase recall lab](https://quadrin.github.io/FlyHamlet/recall.html)** adds a
+separate sequence-memory benchmark, described in [Experiment 4](#experiment-4-phrase-recall).
 
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
@@ -339,8 +341,110 @@ explicit presses, and worker pause/restart/export/error behavior.
 
 This first benchmark is motivated by [connectome reservoir computing](https://pmc.ncbi.nlm.nih.gov/articles/PMC12109256/),
 which used different neuron dynamics and does not validate this implementation.
-Biologically grounded dopamine-modulated plasticity, a broader symbol set,
-unassisted navigation, and sequence recall remain future experiments.
+The next experiment adds external sequence memory. Biologically grounded
+dopamine-modulated plasticity, a broader symbol set, and unassisted navigation
+remain future experiments.
+
+## Experiment 4: phrase recall
+
+Open **[Phrase recall](https://quadrin.github.io/FlyHamlet/recall.html)** and select
+**Run experiment**. A new session trains and evaluates on the full connectome in
+your browser, with a fresh seed and default 1× target speed. It retains the
+skeuomorphic keyboard, assisted fly movement, explicit key presses, pause/resume,
+and exportable audit trail. The two-letter experiment remains available separately.
+
+The task is to reproduce **`to be or not to be`**, then predict **END**, starting
+from **START**. This is an engineered **neural encoder + external memory + learned
+decoder**. All connectome synapses stay fixed. It tests memorization of one taught
+sequence, not language understanding, novel text, or biological memory.
+
+| Stage | Inputs | What changes | Output |
+| --- | --- | --- | --- |
+| Teach | Six repetitions, each START then the actual preceding character | Collect 114 neural observations; fit decoder once | Supervised next-character/END targets |
+| Recall | START once, then each own prediction | Neural noise and six-response history; decoder frozen | Three autonomous sequences |
+| Remove history | Each control rollout's own START/predictions | Mask the five past slots, retain current response | Three autonomous sequences |
+| Symbol comparison | Own START/predictions encoded directly as one-hot vectors | Six-symbol history; independently fitted, frozen decoder | One deterministic sequence repeated three times |
+
+**Encoding and memory.** The restricted output alphabet contains seven symbols:
+`t`, `o`, space, `b`, `e`, `r`, `n`, plus END. Eight input codes (START plus the seven
+characters) divide all 314 annotated LC4/LPLC2 eye cells into disjoint artificial
+stimulation groups, using a fixed seed of 7919. The partition is independent of
+training labels and experimental noise. These codes have no biological claim to
+represent letters. Each input drives its group at 100 Hz for 200 ms. Neural state
+resets to rest for every cue, while the external response history persists within
+an episode and clears at the next START.
+
+The readout excludes all directly stimulated cells. All remaining neurons are
+assigned to 128 fixed index-hash pools (pool seed 104729). A feature is the pool's
+spike count over the final 150 ms, divided by its neuron count and the observation
+time in seconds. There is no fitted evaluation normalization. The current and
+five previous feature vectors occupy six external memory slots, oldest first;
+missing early slots are zero. The resulting 768 features plus a bias feed an
+eight-output ridge decoder with **6,152 fitted coefficients**. A dual Cholesky
+solve fits the one-hot next-symbol targets using penalty **0.01**, including the
+bias. No gradient or synaptic update occurs during recall.
+
+Six history slots were chosen for this phrase: after the repeated `to be`,
+contexts of five characters or fewer cannot distinguish the first occurrence,
+which needs a space, from the final occurrence, which needs END. This is a
+phrase-specific design choice, not a discovered biological memory capacity.
+
+**Recall without a teacher.** The autonomous actor receives frozen decoder
+coefficients, neural feature history, and its current cue. It receives no reference
+phrase, expected character, character position, trial number, clock feature, or
+target length. After START, its own output determines the next sensory code,
+including mistakes. Separate seed domains provide fresh neural noise for training,
+recall, and history ablation. An episode stops only at a predicted END or a fixed
+**48-decision safety cap**; reaching the cap is reported as truncation. The evaluator
+scores the retained sequence afterward. Exact success requires both the complete
+18-character phrase and the learned END; edit distance alone does not verify END.
+
+**Controls and interpretation.** The history ablation uses the same trained decoder,
+with past slots zeroed. It tests sensitivity to that memory intervention; it is not
+a separately optimized memoryless model. The conventional comparator uses the
+same examples, six-step history, ridge penalty, and fitting method, but encodes
+symbols directly in eight dimensions rather than simulating neural responses.
+Its 392 coefficients differ from the neural decoder's capacity. It runs its own
+feedback loop. Its three rows are identical deterministic repeats, not three
+independent replicates. Success by this comparator shows that direct symbol memory
+can solve this benchmark; failure would not prove fly wiring is necessary.
+Neither control establishes an advantage of the anatomical connectome.
+
+The page retains every autonomous output and reports exact phrase+END success,
+edit distance, and stopping reason. The paper shows all neural recall and ablation
+presses; the table also shows the conventional comparator. Training displays
+input/target pairs while collecting features; it does not fabricate pre-fit typed
+predictions. Export includes partial completed observations or a full run: codebook,
+neural seeds, raw pooled counts, neural features, all decisions, fitted coefficients,
+protocol, provenance, and connectivity hashes. New seeds are simulation replicates
+of one anatomical connectome, not additional biological flies.
+
+Reproduce the development checks with:
+
+```bash
+node scripts/benchmark_recall.cjs --seeds 42,43,44 --out results/recall_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs
+```
+
+Development checks with unchanged defaults on seeds **42, 43, and 44** each
+recalled the complete phrase and END in **3/3** autonomous rollouts (**9/9** total).
+Every history ablation failed (**0/9**); each repeated `t` to the 48-decision cap.
+The deterministic conventional comparator also recalled the phrase exactly.
+The browser run for seed 42 matched the CLI export exactly, including all 315
+neural observations and 201 autonomous decisions.
+
+The [benchmark report](results/recall_benchmark/report.md) retains every tested
+seed and raw output. These are development checks, not a preregistered study.
+The CLI independently reconstructs output from decisions, verifies self-feedback,
+END and edit-distance scoring, checks the single fit and frozen decoder, and hashes
+the complete connectome before and after. Tests also cover reference isolation,
+wrong-choice feedback, memory reset/ablation, a learned stop, and worker lifecycle.
+
+Implementation: `site/recall-model.js` contains the DOM-independent experiment and
+reference-free actor. `site/recall-worker.js` schedules bounded worker computation
+and reuses the verified full-connectome loader. `site/recall.js` renders the observer
+interface and assisted key presses. `python scripts/build_site.py` builds all three
+pages from their templates.
 
 ## Notes and caveats
 

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#c6d0da">
+<meta name="description" content="Can a fixed fly connectome with a trained decoder and external memory reproduce a phrase from a start cue? Run a fresh, auditable sequence-recall experiment.">
+<title>FlyHamlet — Phrase recall</title>
+<link rel="stylesheet" href="site/style.css?v=workstation-1">
+<link rel="stylesheet" href="site/learning.css?v=1">
+<link rel="stylesheet" href="site/recall.css?v=1">
+</head><body><a class="skip-link" href="#recall">Skip to phrase experiment</a>
+<div class="desktop-heading"><span>COMPUTATIONAL NEUROBIOLOGY</span><span>EXPERIMENT 04</span></div>
+<div class="workspace learning-workspace recall-workspace">
+  <div class="window-title"><span class="application-icon" aria-hidden="true">f</span><span>FlyHamlet <span class="window-subtitle">— Sequence Memory Laboratory</span></span><span class="window-grip" aria-hidden="true"></span></div>
+  <header class="masthead">
+    <div class="identity"><div class="eyebrow">Full connectome <span class="divider">/</span> External sequence memory</div><h1>Phrase<span class="wordmark-accent"> recall</span></h1><p>A start cue. Then it has to keep going.</p></div>
+    <div class="model-specs"><div><b>139,255</b><span>modeled neurons</span></div><div><b>6</b><span>steps of external memory</span></div></div>
+  </header>
+  <nav class="menubar" aria-label="Workstation sections"><a href="index.html">Free exploration</a><a href="learn.html">Two-letter lab</a><a class="menu-primary" href="recall.html" aria-current="page">Phrase recall</a><a href="#protocol">Protocol</a><a class="source-link" href="https://github.com/quadrin/FlyHamlet#experiment-4-phrase-recall">Source &amp; methods <span aria-hidden="true">↗</span></a></nav>
+  <main id="recall">
+    <div class="replay-heading"><h2><span class="panel-number">01</span> From copying to recall</h2><div class="status"><span class="status-lamp" aria-hidden="true"></span><span id="lab-status" role="status" data-state="paused">Ready for a new experiment</span></div></div>
+    <p class="lab-intro">Teach a short phrase, freeze the decoder, then let each generated letter become the next input. The fly’s wiring stays fixed; learning and six-step memory are added outside it.</p>
+    <div class="recall-reference"><span>Training phrase / scoring reference</span><q>to be or not to be</q><small>18 characters · 7 symbols + learned END</small></div>
+    <div class="signal-path" aria-label="Recall signal path"><span>START, then <b>own last output</b></span><i aria-hidden="true">→</i><span>Fly connectome <b>fixed encoder</b></span><i aria-hidden="true">→</i><span>External memory <b>6 neural responses</b></span><i aria-hidden="true">→</i><span>Trained decoder <b>letter or END</b></span></div>
+    <section class="lab-toolbar" aria-label="Experiment controls">
+      <button id="lab-run" class="play-button">Run experiment</button><button id="lab-new">New experiment</button>
+      <label for="lab-seed">Seed <input id="lab-seed" type="number" min="0" max="4294967295" step="1" inputmode="numeric" autocomplete="off"></label>
+      <label for="lab-speed">Speed <select id="lab-speed" autocomplete="off"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="20">20×</option></select></label>
+      <button id="lab-export" disabled>Export run</button>
+    </section>
+    <div class="lab-load" id="lab-load" hidden><span id="lab-load-message">Loading the full connectome…</span><button id="lab-retry" hidden>Try again</button></div>
+    <ol class="phase-track" aria-label="Experiment phases"><li data-phase="train"><b>1. Teach</b><span>6 phrase presentations · fit decoder</span></li><li data-phase="recall"><b>2. Recall</b><span>3 fresh rollouts · weights frozen</span></li><li data-phase="ablated"><b>3. Compare</b><span>Remove history / use symbols directly</span></li></ol>
+    <div class="lab-progress"><progress id="lab-progress" max="100" value="0" aria-label="Experiment progress"></progress><span id="lab-progress-text">Waiting to run</span><span id="lab-time">0.00 s simulated</span></div>
+    <div class="lab-desk">
+      <section class="machine lab-machine" aria-labelledby="lab-keyboard-title">
+        <div class="machine-top"><span class="machine-wordmark" id="lab-keyboard-title">FEEDBACK TYPEWRITER <span>Each choice becomes the next cue.</span></span></div>
+        <div class="cue-console"><div><span>Input cue</span><b id="lab-cue">—</b></div><div><span>Decoder choice</span><b id="lab-choice">—</b></div><div><span>Teaching cue</span><b class="update-display" id="lab-teacher">OFF</b></div></div>
+        <div class="recall-memory"><div class="memory-heading"><span>External response memory</span><small>oldest → newest</small></div><ol id="lab-memory" aria-label="Cues whose neural responses occupy the six memory slots"><li>—</li><li>—</li><li>—</li><li>—</li><li>—</li><li>—</li></ol><p id="lab-memory-note">Each slot stores neural activity. Cue labels are shown here for inspection.</p></div>
+        <div class="lab-keyboard-surround"><div id="lab-keyboard" class="lab-keyboard" aria-hidden="true"></div><img id="lab-fly" src="site/assets/fruit-fly.png" alt="The fly is guided to the decoder’s chosen key" width="110" height="110"></div>
+        <div class="lab-action-bar"><span id="lab-action">Waiting to run</span><span id="lab-rate">Target speed 1×</span></div>
+        <p class="lab-assistance">An added controller moves the fly to its chosen key. Presses are explicit, so repeats and mistakes are preserved. This tests a hybrid memory system, not learned navigation.</p>
+      </section>
+      <section class="manuscript lab-manuscript" aria-labelledby="lab-output-heading">
+        <div class="document-title"><span class="document-icon" aria-hidden="true">▤</span><h2 id="lab-output-heading">Raw recall</h2><span class="file-type">TXT</span></div>
+        <div class="paper"><div class="paper-heading"><span class="print-label">FLYHAMLET / AUTONOMOUS OUTPUT</span><span class="eyebrow" id="lab-output-phase">Awaiting recall</span></div><div class="paper-rule"></div><div class="typed" id="lab-output" tabindex="0" role="region" aria-label="Every autonomous output, including errors"></div><div class="paper-footer"><span id="lab-presses">0 presses</span><span>Errors retained</span></div></div>
+        <p class="manuscript-note">Training uses teaching cues. Recall receives START once, then only its own choices. END is a decision, not a key press.</p>
+      </section>
+    </div>
+    <section class="lab-results" aria-labelledby="lab-results-title">
+      <div class="section-heading"><h2 id="lab-results-title"><span class="panel-number">02</span> Can it finish the phrase?</h2><span class="eyebrow" id="lab-lock">Decoder has not been fitted</span></div>
+      <div class="lab-scorecards"><div class="ro left"><span class="readout-label">Neural encoder + memory</span><b id="lab-recall-score">— / 3</b><small>Exact phrase and correct END</small></div><div class="ro right"><span class="readout-label">Same decoder, history removed</span><b id="lab-ablated-score">— / 3</b><small>Current neural response only</small></div><div class="ro gf"><span class="readout-label">Conventional symbol memory</span><b id="lab-symbol-score">—</b><small>Deterministic · same rollout repeated</small></div></div>
+      <div class="lab-table-wrap"><table class="lab-table recall-table"><caption>Every autonomous rollout is retained. Edit distance counts character insertions, deletions, and substitutions. Exact success also requires a predicted END.</caption><thead><tr><th scope="col">System / run</th><th scope="col">Raw output</th><th scope="col">Stop</th><th scope="col">Edits</th><th scope="col">Exact?</th></tr></thead><tbody id="lab-rollouts"><tr><td colspan="5">Results appear here as each rollout finishes.</td></tr></tbody></table></div>
+      <p class="session-note" id="lab-conclusion">This is a memorization benchmark using seven symbols. Success would show recall by the combined system; the conventional comparison uses direct symbol memory.</p>
+    </section>
+    <details class="experiment-notes" id="protocol"><summary><span class="methods-label"><span class="panel-number">03</span> Protocol &amp; scientific limits</span><span class="disclosure-mark" aria-hidden="true">+</span></summary><div class="notes-body">
+      <p><strong>Training.</strong> Present the same 18-character phrase six times. At each step, the previous character is encoded through an arbitrary sensory stimulation pattern; START precedes the first character. Six recent neural responses form the added memory. This history length was chosen for the repeated “to be”: shorter context cannot distinguish continuing after its first occurrence from stopping after its second. A supervised multiclass decoder is fitted to predict the next character, including END after the phrase.</p>
+      <p><strong>Neural encoder.</strong> All 139,255 neurons and 15,091,983 connected pairs remain in the fixed LIF model. Each cue lasts 200 ms, with neural state reset to rest; downstream spike counts exclude all directly stimulated cells. The six-response memory sits outside the connectome. These artificial inputs are a symbol code, not a claim that fly vision recognizes letters.</p>
+      <p><strong>Autonomous recall.</strong> After fitting, the decoder is locked. Each of three fresh-noise rollouts starts with START, then feeds back its own prediction, including every error. The recall actor cannot see the phrase, expected next letter, position, or target length. It stops when it predicts END, or is marked truncated at a fixed 48-decision limit. Scoring happens separately.</p>
+      <p><strong>Comparisons.</strong> The same neural decoder also runs with older memory slots removed. A conventional decoder learns from six steps of directly encoded symbols, using the same training examples and fitting method. Each comparison generates its own output. The symbol model is deterministic: its three displayed rollouts are identical repeats, not independent noise trials. It has fewer input features than the neural decoder, so this is not a comparison at matched capacity. Removing history is an intervention on the trained decoder, not a separately optimized memoryless model.</p>
+      <p><strong>What success means.</strong> This tests reproduction of one short, repeatedly taught sequence over a restricted alphabet. It does not test new prose, language understanding, biological synaptic learning, or a special advantage of fly wiring. Seeds are simulation replicates of one anatomical connectome. Whole-play recall and biological learning remain separate experiments.</p>
+      <p><strong>Reproducibility.</strong> Export the seed, stimulus codebook, protocol, connectome hashes, all neural observations and decisions, fitted parameters, and raw outputs. Every browser session computes a fresh run. New loads default to 1× target speed; actual computation may be slower.</p>
+      <p>Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11446845/">Shiu et al.’s sensorimotor model</a> and <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12109256/">connectome reservoir computing</a>. The latter uses different neural dynamics and does not validate this particular recall system.</p>
+    </div></details>
+  </main>
+  <footer class="site-footer"><span>FlyHamlet / Experimental sequence memory</span><a href="learn.html">Return to the two-letter lab ↗</a></footer>
+</div>
+<noscript><p class="no-script">JavaScript is required to compute this experiment. <a href="https://github.com/quadrin/FlyHamlet#experiment-4-phrase-recall">Read the protocol on GitHub.</a></p></noscript>
+<script src="site/live-model.js" defer></script>
+<script src="site/learning-model.js?v=1" defer></script>
+<script src="site/recall.js?v=1" defer></script>
+</body></html>

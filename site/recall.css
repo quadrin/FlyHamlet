@@ -1,0 +1,138 @@
+.recall-reference {
+  padding: 13px 17px;
+  margin-bottom: 12px;
+  border: 1px solid #80978c;
+  border-radius: 3px;
+  background: linear-gradient(#cbd9c5,#e5edda);
+  box-shadow: inset 0 2px 4px #29473f44,0 1px white;
+  color: #294a3b;
+}
+.recall-reference span, .recall-reference small {
+  display: block;
+  font: .625rem var(--mono);
+}
+.recall-reference q {
+  display: block;
+  padding: 7px 0;
+  font: 1.45rem var(--mono);
+  letter-spacing: .025em;
+  quotes: none;
+}
+.recall-memory {
+  margin: 0 17px 14px;
+  padding: 10px 12px;
+  color: #abd9df;
+  background: #102c3b;
+  border: 1px solid #4b6777;
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px #0008,0 1px white;
+}
+.memory-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font: .625rem var(--mono);
+}
+.memory-heading small {
+  color: #99b9c5;
+  font-size: .5625rem;
+}
+.recall-memory ol {
+  display: grid;
+  grid-template-columns: repeat(6,minmax(0,1fr));
+  list-style: none;
+  margin: 9px 0 7px;
+  padding: 0;
+  gap: 5px;
+}
+.recall-memory li {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(#143949,#1a4756);
+  border: 1px solid #336271;
+  box-shadow: inset 0 1px #ffffff15;
+  color: #c0f4e2;
+  text-shadow: 0 0 8px #7dd9b880;
+  font: .875rem var(--mono);
+}
+.recall-memory li.empty {
+  color: #7897a4;
+}
+.recall-memory p {
+  font-size: .625rem;
+  color: #96b5c3;
+  margin: 0;
+}
+.recall-workspace .lab-manuscript .typed {
+  min-height: 210px;
+  max-height: 305px;
+}
+.recall-workspace .lab-transcript-group {
+  display: block;
+  width: auto;
+  padding: 0;
+}
+.recall-workspace .lab-transcript-text {
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  text-transform: none;
+}
+.recall-end {
+  display: inline-block;
+  padding: 1px 3px;
+  margin-left: 5px;
+  background: #e0e7dd;
+  border: 1px solid #c4cdbd;
+  color: #4b664b;
+  font: .5625rem var(--mono);
+  vertical-align: middle;
+}
+.recall-table td:nth-child(2) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: .8125rem var(--mono);
+}
+.recall-table th:first-child {
+  min-width: 120px;
+}
+.recall-table th:nth-child(2) {
+  width: 42%;
+}
+.recall-table .exact-pass {
+  color: #285e42;
+}
+.recall-table .exact-fail {
+  color: #82532e;
+}
+.recall-workspace .cue-console b {
+  font-size: 1rem;
+  line-height: 1.9;
+}
+@media(max-width:1000px) {
+  .recall-workspace .lab-manuscript .typed {
+    min-height: 90px;
+    max-height: 190px;
+  }
+}
+@media(max-width:560px) {
+  .recall-reference q {
+    font-size: 1.1rem;
+  }
+  .recall-memory {
+    margin-inline: 9px;
+    padding: 9px;
+  }
+  .memory-heading {
+    font-size: .5625rem;
+  }
+  .recall-memory li {
+    font-size: .625rem;
+  }
+  .recall-table th:first-child {
+    min-width: 82px;
+  }
+  .recall-table td:nth-child(2) {
+    font-size: .6875rem;
+  }
+}
