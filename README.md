@@ -12,6 +12,15 @@ brain serve as an entropy source that eventually types Hamlet?
 > `config.yaml`, not from the connectome itself. The brain shapes and mixes that noise; it does
 > not create it.
 
+## Replay viewer
+
+The recorded flies can be watched in the browser: `index.html` (built by `scripts/build_site.py`
+from `results/arena`, data in `site/data/`) replays each fly over the key grid with its looming
+input, turning-DN rates, giant-fiber rate and typed text. GitHub Pages serves it at the repository's
+Pages URL; locally, `python -m http.server` in the repo root and open `/index.html`. The viewer
+plays back recordings; the simulation itself runs in Python (`flyhamlet/sim.py`, `flyhamlet/arena.py`),
+headless or with `--live` for a matplotlib window.
+
 ## Layout
 
 ```

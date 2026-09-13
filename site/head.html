@@ -1,0 +1,56 @@
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>FlyHamlet Replay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Special+Elite&display=swap">
+<style>
+:root{
+  --bg:#EDF0EC; --paper:#F7F8F5; --ink:#1B2320; --muted:#6F7A74; --line:#CBD3CD; --grid:#DCE2DD;
+  --left:#1D7F80; --right:#8B3D7A; --gf:#B8781A; --trail:#1B2320; --key-hot:#E7DDB0;
+  --focus:#1D7F80;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111716; --paper:#182120; --ink:#E4E9E3; --muted:#8F9B94; --line:#2F3B37; --grid:#243029;
+    --left:#4FB8B7; --right:#C878B4; --gf:#E0A64A; --trail:#E4E9E3; --key-hot:#4A4526; --focus:#4FB8B7;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111716; --paper:#182120; --ink:#E4E9E3; --muted:#8F9B94; --line:#2F3B37; --grid:#243029;
+  --left:#4FB8B7; --right:#C878B4; --gf:#E0A64A; --trail:#E4E9E3; --key-hot:#4A4526; --focus:#4FB8B7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:14px;line-height:1.45;
+  padding-block:20px 96px;padding-inline:20px;max-width:1100px;margin-inline:auto}
+h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 16px;max-width:70ch}
+.eyebrow{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+.facts{display:flex;gap:20px;flex-wrap:wrap}
+.fact{display:flex;flex-direction:column;gap:2px}
+.fact b{font-weight:500;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-size:15px}
+.arena{position:relative;width:100%;aspect-ratio:3/1;max-width:100%;background:var(--paper);border:1px solid var(--line)}
+.arena canvas{display:block;width:100%;height:100%}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 18px;margin:12px 0 14px}
+.ro{display:flex;flex-direction:column;gap:2px;border-top:2px solid var(--line);padding-top:6px}
+.ro.left{border-color:var(--left)} .ro.right{border-color:var(--right)} .ro.gf{border-color:var(--gf)}
+.ro b{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;font-weight:500;font-size:18px}
+.ro small{color:var(--muted)}
+.paper{background:var(--paper);border:1px solid var(--line);padding:14px 18px;margin:0 0 14px;overflow:hidden}
+.paper .eyebrow{margin-bottom:6px}
+.typed{font-family:"Special Elite","Courier New",monospace;font-size:19px;line-height:1.5;letter-spacing:0.02em;white-space:pre-wrap;word-break:break-all;min-height:2.9em}
+.typed .cursor{display:inline-block;width:0.6em;border-bottom:2px solid var(--ink);animation:blink 1s steps(2) infinite}
+@media (prefers-reduced-motion: reduce){.typed .cursor{animation:none}}
+@keyframes blink{50%{opacity:0}}
+.strip{background:var(--paper);border:1px solid var(--line);width:100%;height:240px;max-width:100%;display:block}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 0;color:var(--muted);font-size:12px}
+.legend span::before{content:"";display:inline-block;width:14px;height:3px;margin-right:6px;vertical-align:middle;background:var(--c)}
+.transport{position:fixed;left:0;right:0;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:10px 20px;
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.transport .inner{display:flex;gap:14px;align-items:center;flex-wrap:wrap;width:100%;max-width:1060px;margin-inline:auto}
+button,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);padding:6px 12px;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--left)}
+.time{min-width:120px}
+.note{color:var(--muted);font-size:12.5px;max-width:78ch;margin-top:16px}
+.note b{color:var(--ink);font-weight:500}
+@media (max-width:520px){body{padding-inline:16px;padding-block:16px 130px} .typed{font-size:16px}}
+</style>
