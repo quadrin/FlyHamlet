@@ -42,6 +42,8 @@ live two-letter benchmark with a supervised decoder and explicit key presses.
 Its protocol and limits are described in [Experiment 3](#experiment-3-two-letter-learning).
 The **[Phrase recall lab](https://quadrin.github.io/FlyHamlet/recall.html)** adds a
 separate sequence-memory benchmark, described in [Experiment 4](#experiment-4-phrase-recall).
+The **[Memory lab](https://quadrin.github.io/FlyHamlet/memory.html)** measures
+post-cue neural information without external history ([Experiment 5](#experiment-5-neural-memory)).
 
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
@@ -445,6 +447,144 @@ reference-free actor. `site/recall-worker.js` schedules bounded worker computati
 and reuses the verified full-connectome loader. `site/recall.js` renders the observer
 interface and assisted key presses. `python scripts/build_site.py` builds all three
 pages from their templates.
+
+## Experiment 5: neural memory
+
+Open **[Memory lab](https://quadrin.github.io/FlyHamlet/memory.html)** and select
+**Run experiment**. The assay removes a sensory symbol cue and asks how much
+information a frozen decoder can recover from newly measured neural activity.
+Every session computes the full network. The default speed is 1×; the protocol
+simulates **141.12 seconds**, with device-dependent wall time. Pause/resume,
+new seeds, and full or partial exports work as in the other labs.
+
+This addresses a limitation of Experiment 4: that experiment resets the brain
+between characters and uses six stored response vectors as external history.
+Here, **each delayed decoder sees only one fresh post-cue window**. It has no cue
+label, elapsed time, earlier response vector, prediction, or other persistent
+readout state. Learning remains in external decoder weights. The question is
+whether information about the cue survives in the fixed model's neural dynamics.
+
+| Condition | Cue period | At cue offset | Decoder training |
+| --- | --- | --- | --- |
+| Retain state | Original graph | Input off; dynamic state retained | Fit then freeze |
+| Reset state | Original graph; identical inputs | Replace all dynamic state with rest | Same fitting budget |
+| Rewired | Fixed artificial comparison graph; identical inputs | Input off; dynamic state retained | Same fitting budget |
+
+Each condition has **56 training and 56 held-out trials**: eight per symbol for
+`t`, `o`, space, `b`, `e`, `r`, and `n`, shuffled separately in the two phases.
+All conditions use exactly the same cue order and noise seeds. Training and
+held-out trials use distinct seeds. Every trial begins at rest; only the reset
+condition resets again at cue offset. The readout scores therefore pair across
+conditions, and all delays within a trial are correlated observations.
+
+**Timing.** The artificial cue drives its sensory partition at **100 Hz for
+200 ms**, using the same fixed codebook as the phrase lab. START's partition is
+unused. All 314 annotated eye cells, including that unused partition, are excluded
+from the neural features. Input is disabled before any post-cue simulation step.
+Remaining membrane voltages, synaptic currents, refractory states and queued
+synaptic events can evolve in retained-state conditions. Reset replaces all of
+those states, including the neural RNG, with a fresh resting network and no input.
+Background drive is disabled.
+
+Each trial measures six **20 ms** windows, starting at **0, 10, 25, 50, 100 and
+200 ms after cue offset**. Their absolute intervals are [200,220), [210,230),
+[225,245), [250,270), [300,320), and [400,420) ms. A window counts only spikes
+emitted during that half-open interval. It cannot reuse a running average or
+counts from the preceding cue. The first windows overlap, so their accuracy
+estimates must not be treated as independent replications. Early post-cue signals
+may reflect transient processing or delayed synaptic propagation; they are not
+by themselves evidence of a sustained biological memory mechanism.
+
+**Cue-visible diagnostic.** A seventh, completely separate classifier reads
+[180,200) ms, the final 20 ms while the cue is still on. Its purpose is to check
+whether the symbol was decodable before testing its persistence. Its features
+and fitted coefficients never feed a delayed decoder. This makes a failure of
+initial encoding distinguishable from loss after cue removal. The retained and
+reset conditions have exactly the same cue-visible observations and scores.
+
+**Readouts.** As in the phrase lab, a fixed index hash assigns nonstimulated
+neurons to 128 pools. Each feature is a pool's window spike count divided by its
+neuron count and 0.020 seconds. Each condition/window gets its own seven-output
+ridge fit on 56 examples, penalty 0.01 including the bias, with 128 features plus
+one bias (903 coefficients). There are 21 readouts total: six delayed and one
+cue-visible per condition. All coefficients remain frozen on held-out trials.
+No synapse in either graph changes during the experiment.
+
+**Rewired comparison.** One Fisher–Yates permutation of all target edge slots,
+using graph seed **1299709**, keeps the original source row pointers and signed
+source-edge weights. This preserves each neuron's incoming and outgoing *edge
+counts*, counting parallel edges separately, and each source's weight list. It
+is a directed configuration-model multigraph, so new self loops and multiple
+edges per pair are allowed. The default generated graph has **288 self-loop
+slots**, **57,897 additional parallel slots**, and **15,034,086 distinct directed
+pairs**, across the same 15,091,983 edge slots and 139,255 neurons. Incoming weighted
+strengths, per-target excitation/inhibition balance, distinct-neighbor counts,
+regions, and spatial geometry are not preserved.
+
+The generated target-array SHA-256 is
+`6cb75c28a3717527ff94aa665a1d6c8b87b06fca0f051fabf878559245a13fe1`.
+Preparation is chunked for browser responsiveness and cached across new runs.
+The original graph is never edited. This is one fixed comparison network, not
+a population of independent null graphs. Rewiring can change response gain or
+stability, so an accuracy difference alone does not isolate a memory mechanism.
+
+**Results and interpretation.** The page plots held-out accuracy and mean
+whole-brain spikes against delay. The table includes zero-spike trial counts;
+exports additionally distinguish silence across all neurons from silence in
+only the readout pools. Chance accuracy is **1/7 (about 14.3%)**. Completed phases
+are balanced, so overall and balanced accuracy coincide; the export includes
+class-level scores, confusion matrices and per-point 95% Wilson intervals.
+Those intervals describe trial accuracy, not uncertainty across biological flies
+or across independently sampled delays.
+
+All six predictions are retained for every held-out trial. The delay selector
+changes only the displayed fly/readout; it cannot alter the protocol, neural
+inputs, or stored results. The illustration does not model learned navigation.
+A successful assay shows information linearly recoverable in these windows by
+these decoders. Failure characterizes this model, codebook, and measurement; it
+does not establish the memory capacity of real flies. Reproducing a phrase from
+continuous neural state remains a separate experiment, guided by these results.
+
+Reproduce the development runs and checks with:
+
+```bash
+node scripts/benchmark_memory.cjs --seeds 42,43,44 --out results/memory_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs
+```
+
+Development runs used unchanged defaults with seeds **42, 43 and 44**. With the
+cue visible, original-wiring accuracy was **44.6%, 58.9% and 58.9%**. In the first
+20 ms after cue offset, it was **23.2%, 26.8% and 21.4%**. These early responses
+include residual spiking; they do not establish sustained memory. At both the
+**100 ms and 200 ms delays**, all 168 retained-state evaluation trials were silent,
+and accuracy was exactly chance. Reset trials were silent at every post-cue delay.
+The rewired network also became silent at these longer delays and had higher
+cue-visible accuracy, so these runs do not establish a memory advantage of the
+anatomical wiring. They do not yet justify replacing the phrase lab's external
+history with a spike-only neural readout.
+
+The browser's full seed 42 export matched the CLI exactly: 336 trials and 1,176
+held-out predictions. An independent audit reproduced all seven windows for
+paired retained/reset/rewired trials, then recalculated every evaluation score
+from frozen coefficients. All 79 model, loader, rewiring and worker tests passed.
+
+The [benchmark report](results/memory_benchmark/report.md) links complete raw runs
+as gzip-compressed JSON. Browser **Export run** produces ordinary JSON, including
+partial completed observations. Both include codebook and noise seeds, all window
+boundaries, raw pool counts and features, neural activity, predictions, frozen
+weights, original graph provenance/hashes, and the rewired target hash/metadata.
+The CLI independently scores predictions and verifies paired inputs, timing,
+cue-visible separation, frozen fits, and unchanged connectivity arrays.
+
+Implementation: `site/memory-model.js` contains the assay; `site/memory-rewire.js`
+prepares and audits the control; `site/memory-worker.js` schedules computation;
+`site/memory.js` renders the observer interface. Build all four pages with
+`python scripts/build_site.py`.
+
+The design is motivated by [connectome reservoir memory tests and rewired controls](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/).
+The underlying [sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
+was validated for different tasks and explicitly notes limitations in precise
+dynamics and neuromodulation. Neither paper validates this new memory assay.
 
 ## Notes and caveats
 
