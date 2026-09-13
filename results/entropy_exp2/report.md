@@ -41,5 +41,15 @@ uniform source: 27^8 ~ 2.8e11, and a 167k-character text offers ~167k starting p
 
 ## dieharder
 
-See `dieharder.txt` (subset: sts_monobit, sts_runs, sts_serial, rgb_bitdist, operm5, rank32x32;
-the whitened file is small, so dieharder rewinds it).
+Subset sts_monobit, sts_runs, sts_serial, diehard_runs, operm5, rank32x32 (`scripts/run_dieharder.sh`, `dieharder.txt`):
+
+| stream | FAILED | WEAK | PASSED |
+|---|---|---|---|
+| raw ISIs (uint32) | 34 | 2 | 0 |
+| whitened SHA-256 | 11 | 11 | 14 |
+| /dev/urandom control, same size (1.8 MB) | 9 | 13 | 12 |
+
+The whitened stream and the true-random control have the same profile: dieharder needs far more
+than 1.8 MB and rewinds the file many times per test, which by itself produces FAILED/WEAK
+verdicts. All 56,301 SHA-256 digests are distinct (byte mean 127.54). The raw ISIs fail on their
+own merits (high bits mostly zero, strongly non-uniform), which is why they are hashed.

@@ -1,2 +1,34 @@
          sts_monobit|   1|    100000|     100|0.00000007|  FAILED  
             sts_runs|   2|    100000|     100|0.00915543|  PASSED  
+          sts_serial|   1|    100000|     100|0.00000007|  FAILED  
+          sts_serial|   2|    100000|     100|0.00007191|   WEAK   
+          sts_serial|   3|    100000|     100|0.01163103|  PASSED  
+          sts_serial|   3|    100000|     100|0.39002580|  PASSED  
+          sts_serial|   4|    100000|     100|0.00233136|   WEAK   
+          sts_serial|   4|    100000|     100|0.02616420|  PASSED  
+          sts_serial|   5|    100000|     100|0.48042093|  PASSED  
+          sts_serial|   5|    100000|     100|0.00016471|   WEAK   
+          sts_serial|   6|    100000|     100|0.00002860|   WEAK   
+          sts_serial|   6|    100000|     100|0.00052728|   WEAK   
+          sts_serial|   7|    100000|     100|0.05417446|  PASSED  
+          sts_serial|   7|    100000|     100|0.00068472|   WEAK   
+          sts_serial|   8|    100000|     100|0.01593105|  PASSED  
+          sts_serial|   8|    100000|     100|0.00356347|   WEAK   
+          sts_serial|   9|    100000|     100|0.00011856|   WEAK   
+          sts_serial|   9|    100000|     100|0.00981833|  PASSED  
+          sts_serial|  10|    100000|     100|0.00000000|  FAILED  
+          sts_serial|  10|    100000|     100|0.00000009|  FAILED  
+          sts_serial|  11|    100000|     100|0.00000000|  FAILED  
+          sts_serial|  11|    100000|     100|0.00000391|   WEAK   
+          sts_serial|  12|    100000|     100|0.00000003|  FAILED  
+          sts_serial|  12|    100000|     100|0.00001535|   WEAK   
+          sts_serial|  13|    100000|     100|0.00000000|  FAILED  
+          sts_serial|  13|    100000|     100|0.00016531|   WEAK   
+          sts_serial|  14|    100000|     100|0.00000000|  FAILED  
+          sts_serial|  14|    100000|     100|0.00001269|   WEAK   
+          sts_serial|  15|    100000|     100|0.00007629|   WEAK   
+          sts_serial|  15|    100000|     100|0.12213215|  PASSED  
+          sts_serial|  16|    100000|     100|0.00563416|  PASSED  
+          sts_serial|  16|    100000|     100|0.04801519|  PASSED  
+      diehard_operm5|   0|   1000000|     100|0.00000000|  FAILED  
+  diehard_rank_32x32|   0|     40000|     100|0.04919092|  PASSED  

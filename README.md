@@ -201,7 +201,14 @@ rather than used mod 27. Typist: after 1.7 M keys the longest substring of Hamle
 8 characters (`'c look y'`, found at key 26,236) at 2.3 M keys/s through the suffix automaton;
 a 9-character record is expected after ~3e7 keys and Hamlet itself after ~27^167325 = 10^239503.
 
-RESULTS_DIEHARDER
+dieharder (`results/entropy_exp2/dieharder.txt`, subset sts_monobit / sts_runs / sts_serial /
+diehard_runs / operm5 / rank32x32, `-g 201` raw 32-bit words): the raw ISI stream fails 34 of 36
+results outright (2 weak); the whitened stream gives 11 FAILED / 11 WEAK / 14 PASSED. That
+whitened profile is not a defect of the source: a same-sized (1.8 MB) `/dev/urandom` control file
+run through the identical subset gives 9 FAILED / 13 WEAK / 12 PASSED, because dieharder needs
+gigabytes and rewinds a small file many times per test (all 56,301 SHA-256 digests in the
+whitened stream are distinct, byte mean 127.54). A full-battery dieharder run needs a much longer
+tap (`entropy_tap.duration_s`) and `scripts/run_dieharder.sh`.
 
 ## Notes and caveats
 
