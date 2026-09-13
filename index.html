@@ -2,17 +2,17 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#202823">
-<meta name="description" content="Watch a simulated fruit-fly brain explore a keyboard. Replay four recorded FlyWire connectome runs, their keystrokes, and neural activity.">
+<meta name="description" content="Start a fresh live simulation of the full fruit-fly connectome. Watch newly computed neural activity, movement, and typing, or compare four saved runs.">
 <title>FlyHamlet — The connectome typewriter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Special+Elite&display=swap">
-<link rel="stylesheet" href="site/style.css">
+<link rel="stylesheet" href="site/style.css?v=live-1">
 </head><body><a class="skip-link" href="#replay">Skip to replay</a>
 <div class="workspace">
   <header class="masthead">
     <div class="identity">
-      <div class="eyebrow">FlyWire v783 <span class="divider">/</span> A recorded experiment</div>
+      <div class="eyebrow">FlyWire v783 <span class="divider">/</span> <span id="session-kind">Live simulation</span></div>
       <h1>FlyHamlet<span class="title-period">.</span></h1>
       <p>A fruit-fly brain at the keyboard.</p>
     </div>
@@ -21,33 +21,33 @@
   <main id="replay">
     <div class="replay-heading">
       <h2 class="eyebrow">The connectome typewriter</h2>
-      <div class="status"><span class="status-lamp" aria-hidden="true"></span><span id="status" role="status">Loading recording</span></div>
+      <div class="status"><span class="status-lamp" aria-hidden="true"></span><span id="status" role="status">Loading brain wiring</span></div>
     </div>
     <div class="writing-desk">
-      <section class="machine" aria-label="Keyboard arena and replay controls">
+      <section class="machine" aria-label="Keyboard arena and session controls">
         <div class="machine-top">
           <span class="machine-wordmark">FlyHamlet <span>MODEL 783</span></span>
-          <div class="specimen-select"><label for="fly">Specimen</label><select id="fly"><option value="00">Fly 00</option><option value="01">Fly 01</option><option value="02">Fly 02</option><option value="03">Fly 03</option></select></div>
+          <div class="specimen-select"><label for="fly">Session</label><select id="fly" aria-label="Session"><option value="live" selected>Live session</option><optgroup label="Saved recordings"><option value="00">Recorded fly 00</option><option value="01">Recorded fly 01</option><option value="02">Recorded fly 02</option><option value="03">Recorded fly 03</option></optgroup></select></div>
         </div>
         <div class="keyboard-deck">
           <div class="keyboard-surround">
             <div class="arena-stage">
               <div id="key-grid" class="key-grid" aria-hidden="true"></div>
-              <canvas id="arena" role="img" aria-label="A fruit fly following its recorded path over a three-row, nine-column keyboard"></canvas>
+              <canvas id="arena" role="img" aria-label="A fruit fly moving over a three-row, nine-column keyboard"></canvas>
             </div>
           </div>
-          <div id="loading" class="loading-overlay"><span id="loading-message">Loading recording…</span><button id="retry" hidden>Try again</button></div>
+          <div id="loading" class="loading-overlay"><span id="loading-message">Loading the full connectome…</span><button id="retry" hidden>Try again</button></div>
           <div class="keyboard-caption"><span>90 × 30 mm <span class="caption-divider">·</span> 27 key regions</span><span>Current key <b id="current-key">—</b></span></div>
         </div>
         <div class="transport">
           <div class="transport-controls">
             <button id="play" class="play-button" disabled><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Play</span></button>
-            <button id="restart" class="icon-button" aria-label="Restart recording" title="Restart recording" disabled>↺</button>
-            <div class="speed-control"><label for="speed">Speed</label><select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1">1×</option><option value="2">2×</option><option value="5" selected>5×</option><option value="10">10×</option><option value="20">20×</option></select></div>
+            <button id="restart" class="session-button" aria-label="Start a new live session" title="Start a new live session with a fresh seed" disabled>New session</button>
+            <div class="speed-control"><label for="speed">Speed</label><select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option></select></div>
             <button id="trail" class="trail-button" aria-pressed="false"><span class="toggle-track" aria-hidden="true"></span>Show trail</button>
           </div>
-          <div class="timeline"><input id="scrub" type="range" min="0" max="29999" value="0" step="1" aria-label="Scrub through the recording" disabled><span id="time" class="mono time">0.00 s / 300.00 s</span></div>
-          <div class="transport-foot"><span id="f-run">fly 00 · seed 42</span><span class="space-hint"><kbd>space</kbd> to pause</span></div>
+          <div class="timeline"><span id="compute-rate" class="compute-rate">Preparing live simulation</span><input id="scrub" type="range" hidden min="0" max="29999" value="0" step="1" aria-label="Scrub through the recording" disabled><span id="time" class="mono time">0.00 s simulated</span></div>
+          <div class="transport-foot"><span id="f-run">Starting new session</span><span class="space-hint"><kbd>space</kbd> to pause</span></div>
         </div>
       </section>
       <section class="manuscript" aria-labelledby="typed-heading">
@@ -56,11 +56,12 @@
           <div class="paper-heading"><h2 id="typed-heading">The manuscript</h2><span id="manuscript-state" class="eyebrow">In progress</span></div>
           <div class="paper-rule"></div>
           <div id="typed" class="typed" tabindex="0" role="region" aria-label="Typed manuscript; scroll to read earlier keystrokes"><span class="cursor"></span></div>
-          <div class="paper-footer"><span><b id="typed-count">0</b> keystrokes</span><span>of <b id="f-keys">—</b></span></div>
+          <div class="paper-footer"><span><b id="typed-count">0</b> keystrokes</span><span id="recording-total" hidden>of <b id="f-keys">—</b></span></div>
         </div>
         <p class="manuscript-note">A letter is typed each time the fly enters a new key region.</p>
       </section>
     </div>
+    <p id="session-note" class="session-note">New session resets the brain and starts with a fresh random seed. Speed depends on your device.</p>
     <section class="neural-section" aria-labelledby="signals-heading">
       <div class="section-heading"><h2 id="signals-heading">Inside the brain</h2><span class="eyebrow"><span id="f-spikes">—</span> spikes simulated</span></div>
       <div class="readouts" aria-live="off">
@@ -80,14 +81,14 @@
     <details class="experiment-notes">
       <summary>About this experiment <span aria-hidden="true">+</span></summary>
       <div class="notes-body">
-        <p>The FlyWire connectome links 139,255 neurons in a simulated fruit-fly brain. Each recording follows 300 seconds in a 90 × 30 mm arena. Letters are assigned to the 3 × 9 grid by a seeded permutation.</p>
+        <p>The live session computes a fresh run of the full FlyWire v783 connectome: 139,255 neurons and 15,091,983 connected pairs. Neurons use the repository’s leaky integrate-and-fire model at 0.1 ms steps. Letters are assigned to the 90 × 30 mm arena’s 3 × 9 grid by a seeded permutation. Saved 300-second recordings remain available in the session menu.</p>
         <p>The fly walks at a base speed of 8 mm/s. Nearby walls send proximity-scaled Poisson input to the eye’s LC4 + LPLC2 looming detectors; the network drives turning neurons on the opposite side, steering the fly away. Turning rates use a 50 ms window. The giant-fiber escape signal is recorded but does not control walking.</p>
-        <p>Randomness comes from the injected Poisson inputs. The brain’s wiring shapes that noise. The hovering fly is a visual interpretation of the recorded walking trajectory, with enlarged artwork for visibility. This page replays recordings; it does not run the simulation.</p>
+        <p>Randomness comes from the injected Poisson inputs. The brain’s wiring shapes that noise. Each live session uses a fresh random seed; its path and keystrokes are computed as it runs. The browser uses its own seeded random-number generator, so its seed values do not reproduce the Python recordings. The hovering artwork depicts the model’s walking trajectory and is enlarged for visibility.</p>
       </div>
     </details>
   </main>
-  <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> Four flies. One connectome.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
+  <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> 139,255 neurons. A new session every time.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
 </div>
-<noscript><p class="no-script">Enable JavaScript to watch the recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
-<script src="site/replay.js" defer></script>
+<noscript><p class="no-script">Enable JavaScript to run the live simulator or watch saved recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
+<script src="site/replay.js?v=live-1" defer></script>
 </body></html>

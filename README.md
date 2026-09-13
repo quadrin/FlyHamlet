@@ -12,22 +12,47 @@ brain serve as an entropy source that eventually types Hamlet?
 > `config.yaml`, not from the connectome itself. The brain shapes and mixes that noise; it does
 > not create it.
 
-## Replay viewer
+## Live browser sessions and replay viewer
 
-The recorded flies can be watched in the browser: `index.html` (built by `scripts/build_site.py`
-from `results/arena`, data in `site/data/`) replays each fly over the key grid with its looming
-input, turning-DN rates, giant-fiber rate and typed text. GitHub Pages serves it at the repository's
-Pages URL; locally, `python -m http.server` in the repo root and open `/index.html`. The viewer
-plays back recordings; the simulation itself runs in Python (`flyhamlet/sim.py`, `flyhamlet/arena.py`),
-headless or with `--live` for a matplotlib window.
+GitHub Pages opens a fresh browser simulation of the **full** FlyWire v783 network,
+with all 139,255 neurons and 15,091,983 connected pairs. The initial visit downloads
+48.5 MB of compressed wiring data; a Web Worker computes new spikes, sensorimotor
+activity, movement, and keystrokes without a server. **New session** resets neural
+state and chooses a new cryptographically generated 32-bit seed. Pause/resume,
+target speed, and the trajectory trail work during live sessions. The display shows
+simulated time and the actual simulation-to-wall-time ratio; full-network computation
+may run slower than real time. Background tabs pause the session.
 
-The viewer uses `site/head.html`, `site/body.html`, `site/style.css`, and `site/replay.js`.
-After editing the templates, run `python scripts/build_site.py` to regenerate `index.html`.
-UI-only rebuilds reuse the committed recordings and do not require pandas. The keyboard
-and enlarged hovering fly follow the recorded walking coordinates; visual flight effects
-do not change the simulation. Playback supports four specimens, speed selection, scrubbing,
-restart, an optional trajectory trail, and Space to play/pause. Reduced-motion preferences
-disable autoplay and decorative movement.
+The browser model (`site/live-model.js`) ports the Python LIF equations, float32
+arithmetic, update order, signed synapses, delays, refractory behavior, arena controller,
+and key-region rules. It skips resting neurons and exact floating-point fixed points
+without removing neurons or connections. Its xoshiro128** random stream reproduces
+browser sessions by seed but differs from NumPy PCG64, so identical seed numbers do
+not reproduce the historical Python trajectories. The hovering artwork is a visual
+interpretation of the model’s walking trajectory.
+
+Four saved 300-second runs remain available in the **Session** menu. These load
+`site/data/flyNN.json` and retain playback speed and scrubbing. Live sessions never
+load those trajectory files. Both modes share the keyboard, manuscript, neural
+readouts, and rolling chart. Reduced-motion preferences disable autoplay and
+cosmetic movement. Space toggles pause/resume when focus is outside a control.
+
+Locally, run `python -m http.server` in the repository root and open `/index.html`.
+The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
+are `site/style.css` and `site/replay.js`. Run `python scripts/build_site.py` after
+editing the templates. UI-only rebuilds reuse committed data and require no pandas.
+
+To regenerate the full browser wiring export from the public release tables:
+
+```bash
+python scripts/export_browser_connectome.py
+node --test tests/test_live_model.cjs
+```
+
+`site/model/manifest.json` records the exact configuration, target neuron indices,
+key layout, source URLs and SHA-256 hashes. The worker checks the decompressed
+array hashes before starting a session. Python simulation remains available through
+`flyhamlet/run_flies.py`, with `--live` for its matplotlib viewer.
 
 ## Layout
 

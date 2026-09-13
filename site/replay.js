@@ -1,4 +1,4 @@
-/* A faithful replay of recorded samples; the fly's visual altitude is decorative. */
+/* Live full-connectome simulation and saved-run viewer. Visual altitude is decorative. */
 (() => {
   'use strict';
 
@@ -12,6 +12,7 @@
   const els = Object.fromEntries([
     'fly', 'speed', 'play', 'play-icon', 'play-label', 'restart', 'scrub',
     'time', 'status', 'loading', 'loading-message', 'retry', 'trail',
+    'session-kind', 'compute-rate', 'recording-total', 'session-note',
     'f-run', 'f-keys', 'f-spikes', 'typed-count', 'current-key', 'manuscript-state',
     'r-loomL', 'r-loomR', 'r-dnL', 'r-dnR', 'r-gf', 'r-motion',
   ].map((id) => [id, byId(id)]));
@@ -21,6 +22,11 @@
   const sprite = new Image();
   // Matches the canvas overscan in style.css; positions still map to the key grid.
   const arenaInset = 64;
+  let liveMode = true;
+  let liveWorker = null;
+  let liveWorkerReady = false;
+  let liveSeed = null;
+  let liveKeyOffset = 0;
   let D = null;
   let T = null;
   let i = 0;
@@ -62,9 +68,9 @@
   }
 
   function syncPlayButton() {
-    setText('play-label', playing ? 'Pause' : (D && i === T.t_s.length - 1 ? 'Replay' : 'Play'));
+    setText('play-label', playing ? 'Pause' : (liveMode ? 'Resume' : (D && i === T.t_s.length - 1 ? 'Replay' : 'Play')));
     setText('play-icon', playing ? 'Ⅱ' : '▶');
-    els.play.setAttribute('aria-label', playing ? 'Pause recording' : 'Play recording');
+    els.play.setAttribute('aria-label', liveMode ? (playing ? 'Pause live session' : 'Resume live session') : (playing ? 'Pause recording' : 'Play recording'));
     els.play.setAttribute('aria-pressed', String(playing));
   }
 
@@ -306,18 +312,18 @@
 
   function drawTyped() {
     const count = enteredCount(T.t_s[i]);
-    setText('manuscript-state', i === T.t_s.length - 1 ? 'Complete' : 'In progress');
+    setText('manuscript-state', liveMode ? 'Live session' : (i === T.t_s.length - 1 ? 'Complete' : 'In progress'));
     if (count !== typedCount) {
       typedCount = count;
-      typed.textContent = D.keys.slice(0, count).map((key) => key[2]).join('');
+      typed.textContent = (liveMode && liveKeyOffset ? '…' : '') + D.keys.slice(0, count).map((key) => key[2]).join('');
       const cursor = document.createElement('span');
       cursor.className = 'cursor';
       cursor.setAttribute('aria-hidden', 'true');
       typed.appendChild(cursor);
       typed.scrollTop = typed.scrollHeight;
-      setText('typed-count', count.toLocaleString());
+      setText('typed-count', (count + (liveMode ? liveKeyOffset : 0)).toLocaleString());
     }
-    const current = count ? D.keys[count - 1][1] : -1;
+    const current = count ? D.keys[count - 1][1] : (liveMode ? Math.min(D.rows - 1, Math.floor(T.y[i] / D.H * D.rows)) * D.cols + Math.min(D.cols - 1, Math.floor(T.x[i] / D.W * D.cols)) : -1);
     if (current !== activeKey) {
       keyElements[activeKey]?.classList.remove('is-active');
       activeKey = current;
@@ -337,7 +343,7 @@
     setText('r-dnR', `${T.turnDN_R_hz[i].toFixed(1)} Hz`);
     setText('r-gf', `${T.GF_hz[i].toFixed(1)} Hz`);
     setText('r-motion', `${T.v_mm_s[i].toFixed(1)} mm/s · ${T.omega_deg_s[i].toFixed(0)}°/s`);
-    setText('time', `${T.t_s[i].toFixed(2)} s / ${D.duration.toFixed(2)} s`);
+    setText('time', liveMode ? `${T.t_s[i].toFixed(2)} s simulated` : `${T.t_s[i].toFixed(2)} s / ${D.duration.toFixed(2)} s`);
     els.scrub.value = i;
     els.scrub.setAttribute('aria-valuetext', `${T.t_s[i].toFixed(2)} of ${D.duration.toFixed(0)} seconds`);
     els.scrub.style.setProperty('--progress', `${i / Math.max(1, T.t_s.length - 1) * 100}%`);
@@ -354,6 +360,17 @@
     rafId = null;
     playing = Boolean(next && D && !loading);
     lastTimestamp = null;
+    if (liveMode) {
+      liveWorker?.postMessage({ type: playing ? 'resume' : 'pause' });
+      syncPlayButton();
+      if (D && !loading) {
+        setStatus(playing ? 'Running live' : 'Live session paused', playing ? 'playing' : 'paused');
+        setText('compute-rate', playing ? 'Computing in this browser' : 'Paused · brain state retained');
+        draw();
+      }
+      if (playing) rafId = requestAnimationFrame(frame);
+      return;
+    }
     if (playing && i >= T.t_s.length - 1) {
       i = 0;
       playbackTime = T.t_s[0];
@@ -372,10 +389,15 @@
     if (!playing || !D || loading) return;
     if (lastTimestamp !== null) {
       const elapsed = Math.max(0, timestamp - lastTimestamp) / 1000;
-      playbackTime += elapsed * Number(els.speed.value);
+      if (!liveMode) playbackTime += elapsed * Number(els.speed.value);
       if (!reduced) animationTime += elapsed;
     }
     lastTimestamp = timestamp;
+    if (liveMode) {
+      if (!reduced) drawArena();
+      rafId = requestAnimationFrame(frame);
+      return;
+    }
     const nextIndex = sampleAt(playbackTime);
     if (nextIndex !== i) {
       i = nextIndex;
@@ -404,7 +426,154 @@
     return data;
   }
 
+  function showMode(live) {
+    liveMode = live;
+    document.body.dataset.mode = live ? 'live' : 'recording';
+    els.scrub.hidden = live;
+    els['compute-rate'].hidden = !live;
+    els['recording-total'].hidden = live;
+    setText('session-kind', live ? 'Live simulation' : 'Recorded experiment');
+    setText('session-note', live
+      ? 'New session resets the brain and starts with a fresh random seed. Speed depends on your device.'
+      : 'A saved 300-second run. Choose Live session to start a new simulation.');
+    els.restart.textContent = live ? 'New session' : '↺';
+    els.restart.setAttribute('aria-label', live ? 'Start a new live session' : 'Restart recording');
+    els.restart.title = live ? 'Start a new live session with a fresh seed' : 'Restart recording';
+    els.speed.setAttribute('aria-label', live ? 'Target simulation speed' : 'Playback speed');
+    els.speed.title = live ? 'Target speed; actual speed depends on your device' : 'Playback speed';
+  }
+
+  function liveError(message) {
+    if (!liveMode) return;
+    setPlaying(false);
+    loading = false;
+    D = null;
+    T = null;
+    setControlsDisabled(true);
+    els.fly.disabled = false;
+    els.loading.hidden = false;
+    els.loading.classList.add('is-error');
+    els.retry.hidden = false;
+    setText('loading-message', message || 'The live simulator could not start. Please try again.');
+    setStatus('Live session unavailable', 'error');
+    arena.setAttribute('aria-busy', 'false');
+    liveWorker?.terminate();
+    liveWorker = null;
+    liveWorkerReady = false;
+  }
+
+  function handleLiveMessage(event) {
+    const message = event.data;
+    if (!liveMode) return;
+    const messageSeed = message.seed ?? message.metadata?.seed;
+    if (messageSeed != null && messageSeed !== liveSeed) return;
+    if (message.type === 'progress') {
+      const stage = message.message || '';
+      const label = stage.startsWith('Expanding') || stage.includes('ready') ? 'Preparing the brain wiring…' : 'Loading the full connectome (49 MB on first visit)…';
+      setText('loading-message', label);
+      return;
+    }
+    if (message.type === 'error') {
+      liveError(message.message);
+      return;
+    }
+    if (message.type === 'ready') {
+      const metadata = message.metadata;
+      if (!metadata || metadata.seed !== liveSeed) return;
+      liveWorkerReady = true;
+      liveKeyOffset = 0;
+      const initial = message.initial;
+      const fields = ['t_s', 'x', 'y', 'heading_deg', 'v_mm_s', 'omega_deg_s',
+        'loom_L_hz', 'loom_R_hz', 'turnDN_L_hz', 'turnDN_R_hz', 'fwdDN_hz', 'bwdDN_hz', 'GF_hz'];
+      T = Object.fromEntries(fields.map(field => [field, [initial[field] ?? 0]]));
+      D = { ...metadata, traj: T, keys: [], spikes: 0, duration: 0 };
+      i = 0;
+      animationTime = 0;
+      typedCount = -1;
+      setText('f-run', `live · seed ${liveSeed}`);
+      setText('f-spikes', '0');
+      setText('f-keys', '0');
+      setText('compute-rate', `${metadata.n.toLocaleString()} neurons · starting`);
+      buildKeyboard();
+      loading = false;
+      setControlsDisabled(false);
+      els.loading.hidden = true;
+      arena.setAttribute('aria-busy', 'false');
+      resize();
+      setPlaying(!reduced);
+      return;
+    }
+    if (message.type === 'batch' && D && !loading) {
+      for (const sample of message.samples) {
+        for (const field of Object.keys(T)) T[field].push(sample[field] ?? 0);
+      }
+      if (T.t_s.length > 6000) {
+        for (const field of Object.keys(T)) T[field] = T[field].slice(-4000);
+      }
+      D.keys.push(...message.keys);
+      if (D.keys.length > 2000) {
+        const remove = D.keys.length - 1600;
+        D.keys.splice(0, remove);
+        liveKeyOffset += remove;
+        typedCount = -1;
+      }
+      i = T.t_s.length - 1;
+      D.spikes = message.spikes;
+      D.duration = message.simTime;
+      setText('f-spikes', message.spikes.toLocaleString());
+      const ratio = message.realTimeRatio;
+      setText('compute-rate', !playing ? 'Paused · brain state retained' : (Number.isFinite(ratio) ? `${ratio.toFixed(2)}× real time · computing locally` : 'Computing in this browser'));
+      draw();
+    }
+  }
+
+  function startLive() {
+    ++requestId;
+    controller?.abort();
+    setPlaying(false);
+    showMode(true);
+    loading = true;
+    D = null;
+    T = null;
+    liveSeed = crypto.getRandomValues(new Uint32Array(1))[0];
+    typedCount = -1;
+    setControlsDisabled(true);
+    // Users can select a saved run while the larger brain dataset loads.
+    els.fly.disabled = false;
+    els.loading.hidden = false;
+    els.loading.classList.remove('is-error');
+    els.retry.hidden = true;
+    arena.setAttribute('aria-busy', 'true');
+    setStatus(liveWorkerReady ? 'Starting new session' : 'Loading brain wiring', 'loading');
+    setText('loading-message', liveWorkerReady ? 'Starting a fresh brain state…' : 'Loading the full connectome. The first visit downloads the brain wiring.');
+    setText('compute-rate', 'Preparing live simulation');
+    setText('f-run', `live · seed ${liveSeed}`);
+    setText('f-spikes', '—');
+    setText('time', '0.00 s simulated');
+    setText('current-key', '—');
+    for (const field of ['r-loomL', 'r-loomR', 'r-dnL', 'r-dnR', 'r-gf', 'r-motion']) setText(field, '—');
+    sctx.clearRect(0, 0, stripSize.width, stripSize.height);
+    typed.textContent = '';
+    setText('typed-count', '0');
+    try {
+      if (!liveWorker) {
+        liveWorker = new Worker(new URL('live-worker.js', scriptURL));
+        liveWorker.addEventListener('message', handleLiveMessage);
+        liveWorker.addEventListener('error', () => liveError('The simulator stopped unexpectedly. Try again, or choose a saved recording.'));
+      }
+      liveWorker.postMessage({ type: liveWorkerReady ? 'new' : 'init', seed: liveSeed,
+        speed: Number(els.speed.value), autoplay: false,
+        manifestURL: new URL('model/manifest.json', scriptURL).href });
+    } catch (error) {
+      liveError('This browser could not start the live simulator. Try a current browser with Web Worker support.');
+    }
+  }
+
   async function loadFly(id) {
+    if (id === 'live') { startLive(); return; }
+    setPlaying(false);
+    if (liveWorker && !liveWorkerReady) { liveWorker.terminate(); liveWorker = null; }
+    showMode(false);
     const thisRequest = ++requestId;
     controller?.abort();
     controller = new AbortController();
@@ -459,6 +628,7 @@
 
   els.play.addEventListener('click', () => setPlaying(!playing));
   els.restart?.addEventListener('click', () => {
+    if (liveMode) { startLive(); return; }
     if (!D || loading) return;
     i = 0;
     playbackTime = T.t_s[0];
@@ -466,7 +636,7 @@
     setPlaying(!reduced);
   });
   els.scrub.addEventListener('input', () => {
-    if (!D || loading) return;
+    if (liveMode || !D || loading) return;
     i = Math.max(0, Math.min(T.t_s.length - 1, Number(els.scrub.value)));
     playbackTime = T.t_s[i];
     lastTimestamp = null;
@@ -477,7 +647,10 @@
       setStatus('Paused', 'paused');
     }
   });
-  els.speed.addEventListener('change', () => { lastTimestamp = null; });
+  els.speed.addEventListener('change', () => {
+    lastTimestamp = null;
+    if (liveMode) liveWorker?.postMessage({ type: 'speed', value: Number(els.speed.value) });
+  });
   els.fly.addEventListener('change', () => loadFly(els.fly.value));
   els.retry?.addEventListener('click', () => loadFly(els.fly.value));
   els.trail?.setAttribute('aria-pressed', 'false');
@@ -494,7 +667,10 @@
       setPlaying(!playing);
     }
   });
-  document.addEventListener('visibilitychange', () => { lastTimestamp = null; });
+  document.addEventListener('visibilitychange', () => {
+    lastTimestamp = null;
+    if (document.hidden && liveMode && playing) setPlaying(false);
+  });
   media.addEventListener('change', (event) => {
     reduced = event.matches;
     if (reduced) setPlaying(false);

@@ -1157,3 +1157,37 @@ kbd {
     letter-spacing:.04em;
   }
 }
+/* Live sessions compute new samples; recordings retain their timeline. */
+.session-button {
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+.compute-rate {
+  color: #172713;
+  font-size: .75rem;
+}
+body[data-mode="live"] .timeline {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+body[data-mode="live"] .time {
+  margin-left: auto;
+}
+.session-note {
+  margin-top: 24px;
+  max-width: 90ch;
+  font-size: .8125rem;
+  color: #b3bfad;
+}
+.session-note + .neural-section {
+  margin-top: 24px;
+}
+@media(max-width:560px) {
+  .specimen-select label { display: none; }
+  .specimen-select select { max-width: 150px; }
+  .transport-controls { gap: 8px; }
+  .session-button { font-size: .75rem; padding-inline: 10px; }
+  .trail-button { min-height: 36px; }
+  .compute-rate { font-size: .6875rem; }
+  .site-footer { flex-wrap: wrap; }
+}
