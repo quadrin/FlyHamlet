@@ -21,6 +21,14 @@ Pages URL; locally, `python -m http.server` in the repo root and open `/index.ht
 plays back recordings; the simulation itself runs in Python (`flyhamlet/sim.py`, `flyhamlet/arena.py`),
 headless or with `--live` for a matplotlib window.
 
+The viewer uses `site/head.html`, `site/body.html`, `site/style.css`, and `site/replay.js`.
+After editing the templates, run `python scripts/build_site.py` to regenerate `index.html`.
+UI-only rebuilds reuse the committed recordings and do not require pandas. The keyboard
+and enlarged hovering fly follow the recorded walking coordinates; visual flight effects
+do not change the simulation. Playback supports four specimens, speed selection, scrubbing,
+restart, an optional trajectory trail, and Space to play/pause. Reduced-motion preferences
+disable autoplay and decorative movement.
+
 ## Layout
 
 ```

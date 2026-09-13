@@ -2,7 +2,6 @@
 """Build the GitHub Pages replay viewer: index.html + site/data/flyNN.json from results/arena."""
 import glob, json, sys
 from pathlib import Path
-import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 COLS = ['t_s','x','y','heading_deg','v_mm_s','omega_deg_s','loom_L_hz','loom_R_hz','turnDN_L_hz','turnDN_R_hz','fwdDN_hz','bwdDN_hz','GF_hz']
 
@@ -10,6 +9,8 @@ def main(arena_dir="results/arena"):
     out = ROOT / "site/data"; out.mkdir(parents=True, exist_ok=True)
     n = 0
     for tf in sorted(glob.glob(str(ROOT / arena_dir / "fly*_trajectory.csv"))):
+        # UI-only rebuilds reuse the committed recordings and need no pandas.
+        import pandas as pd
         fid = Path(tf).name[3:5]
         tr = pd.read_csv(tf)
         ks = pd.read_csv(tf.replace("_trajectory.csv", "_keystrokes.csv"), keep_default_na=False)
