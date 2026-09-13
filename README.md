@@ -183,7 +183,25 @@ through a suffix automaton of Hamlet and reports the longest Hamlet substring ev
 min-entropy estimates on the raw ISIs and writes raw and whitened 32-bit streams for
 `dieharder -g 201 -f <file>`.
 
-RESULTS_EXP2
+Results (`results/entropy_exp2/report.md`; 4 flies x 120 s, background 200 Hz x 4 mV, 500 tapped
+neurons per fly of which ~430 fire, median 2.6 Hz): 3,603,323 raw ISIs -> 56,301 SHA-256 batches
+-> 1,709,435 keys (accept fraction 0.949).
+
+| data | NIST 800-90B estimator | min-entropy |
+|---|---|---|
+| raw ISI symbols (26,477 distinct values) | most common value | 7.55 bits / sample |
+| raw ISI bits (21-bit words) | MCV / collision | 0.34 / 0.20 bits / bit |
+| raw ISI low byte | MCV | 7.15 bits / byte |
+| whitened SHA-256 bytes | MCV | 7.91 bits / byte |
+| whitened SHA-256 bits | collision | 0.94 bits / bit |
+
+The raw ISIs carry real entropy (about 7.5 bits per interval by the MCV bound) but are far from
+uniform as words: the high bits are almost always zero, which is exactly why they are hashed
+rather than used mod 27. Typist: after 1.7 M keys the longest substring of Hamlet produced is
+8 characters (`'c look y'`, found at key 26,236) at 2.3 M keys/s through the suffix automaton;
+a 9-character record is expected after ~3e7 keys and Hamlet itself after ~27^167325 = 10^239503.
+
+RESULTS_DIEHARDER
 
 ## Notes and caveats
 

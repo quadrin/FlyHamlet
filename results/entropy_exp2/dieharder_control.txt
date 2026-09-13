@@ -1,0 +1,2 @@
+         sts_monobit|   1|    100000|     100|0.00000007|  FAILED  
+            sts_runs|   2|    100000|     100|0.00915543|  PASSED  

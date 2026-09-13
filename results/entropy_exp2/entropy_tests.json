@@ -1,0 +1,60 @@
+{
+ "n_isi": 3603323,
+ "mcv_raw_isi": {
+  "n": 3603323,
+  "alphabet": 26477,
+  "mode": 45,
+  "p_hat": 0.005254871683720832,
+  "p_upper": 0.0053529857534267465,
+  "min_entropy_bits": 7.5454404716295675
+ },
+ "bit_width": 21,
+ "mcv_isi_bits": {
+  "n": 75669783,
+  "alphabet": 2,
+  "mode": 0,
+  "p_hat": 0.7894385001738409,
+  "p_upper": 0.7895592351918853,
+  "min_entropy_bits": 0.34088058926819037
+ },
+ "collision_isi_bits": {
+  "n": 75669783,
+  "v": 33959939,
+  "mean_collision_time": 2.2282072414794385,
+  "x_prime": 2.228021727144088,
+  "p": 0.8687670489997106,
+  "min_entropy_bits": 0.2029587099152361
+ },
+ "mcv_isi_low_byte": {
+  "n": 3603323,
+  "alphabet": 256,
+  "mode": 44,
+  "p_hat": 0.006933044858870548,
+  "p_upper": 0.007045646726160762,
+  "min_entropy_bits": 7.14905214579192
+ },
+ "collision_isi_low_byte_bits": {
+  "n": 28826584,
+  "v": 11468122,
+  "mean_collision_time": 2.5136271658079674,
+  "x_prime": 2.5132469690815604,
+  "p": 0.5,
+  "min_entropy_bits": 1.0
+ },
+ "mcv_whitened_bytes": {
+  "n": 1801632,
+  "alphabet": 256,
+  "mode": 61,
+  "p_hat": 0.004036340384717856,
+  "p_upper": 0.0041580230106924,
+  "min_entropy_bits": 7.909886542502371
+ },
+ "collision_whitened_bits": {
+  "n": 14413056,
+  "v": 5765779,
+  "mean_collision_time": 2.4997584888355937,
+  "x_prime": 2.4992220912010352,
+  "p": 0.5197219268704221,
+  "min_entropy_bits": 0.944188167842482
+ }
+}

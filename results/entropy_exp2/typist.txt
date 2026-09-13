@@ -1,0 +1,9 @@
+[key         1] new record:   1 chars 's' (Hamlet offset 51)
+[key         2] new record:   2 chars 's ' (Hamlet offset 70)
+[key         3] new record:   3 chars 's a' (Hamlet offset 70)
+[key         4] new record:   4 chars 's ab' (Hamlet offset 7,781)
+[key       454] new record:   5 chars 'ng th' (Hamlet offset 2,620)
+[key     3,619] new record:   6 chars 'ng let' (Hamlet offset 71,752)
+[key    26,235] new record:   7 chars 'c look ' (Hamlet offset 93,340)
+[key    26,236] new record:   8 chars 'c look y' (Hamlet offset 93,340)
+keys consumed: 1,709,435; longest Hamlet substring: 8 chars 'c look y' (at key 26,236, Hamlet offset 93,340); 2,265,270 keys/s

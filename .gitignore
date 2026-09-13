@@ -11,3 +11,4 @@ results/**/*_trajectory.csv
 results/entropy_exp2/raw.*
 results/entropy_exp2/whitened*.bin
 results/entropy_exp2/keys.txt
+urandom_control.bin
