@@ -37,6 +37,10 @@ load those trajectory files. Both modes share the keyboard, manuscript, neural
 readouts, and rolling chart. Reduced-motion preferences disable autoplay and
 cosmetic movement. Space toggles pause/resume when focus is outside a control.
 
+The **[Learning lab](https://quadrin.github.io/FlyHamlet/learn.html)** runs a separate,
+live two-letter benchmark with a supervised decoder and explicit key presses.
+Its protocol and limits are described in [Experiment 3](#experiment-3-two-letter-learning).
+
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
 are `site/style.css` and `site/replay.js`. Run `python scripts/build_site.py` after
@@ -251,6 +255,92 @@ run through the identical subset gives 9 FAILED / 13 WEAK / 12 PASSED, because d
 gigabytes and rewinds a small file many times per test (all 56,301 SHA-256 digests in the
 whitened stream are distinct, byte mean 127.54). A full-battery dieharder run needs a much longer
 tap (`entropy_tap.duration_s`) and `scripts/run_dieharder.sh`.
+
+## Experiment 3: two-letter learning
+
+Open **[Learning lab](https://quadrin.github.io/FlyHamlet/learn.html)** and select
+**Run experiment**. This is a fresh computation using the full connectome, not a
+recording. The default target speed is 1×; a complete run simulates 24 seconds,
+with wall time depending on the device. Pause/resume preserves the experiment.
+Backgrounding the page pauses computation. A new experiment clears the decoder
+and chooses a fresh seed; an entered seed reproduces the same protocol.
+
+The question is deliberately small: can an **external supervised decoder** learn
+to distinguish two artificial sensory inputs after they propagate through a
+fixed fly brain model? This tests cue classification/copying. It does not test
+recall of a phrase, understanding of language, or learning inside the connectome.
+
+| Phase | Trials | Decoder updates | Scoring |
+| --- | ---: | --- | --- |
+| Baseline | 20 | Off; zero initial weights | Every decision |
+| Training | 60 | One supervised logistic update after each decision | Before its update |
+| Evaluation | 40 | Frozen at the end of training | Fresh sensory-noise trials |
+
+Each phase is balanced between T and O and independently shuffled. T drives the
+annotated left LC4 + LPLC2 population, O the right, with 100 Hz Poisson input for
+200 ms. Each trial resets neural dynamic state to rest with an independently
+derived noise seed. The neural RNG, target schedule, and decision tie-breaking
+use separate seeded streams. Decoder weights persist across trials.
+
+The decoder receives seven downstream, per-neuron mean rates over the final
+150 ms: left/right turning, forward and backward groups, plus giant fiber. Every
+feature is `min(rate_hz / 100, 1)`. Stimulated sensory neurons are excluded; the
+classifier receives no target, trial index, phase, seed, or prior outcome.
+Seven coefficients and one bias start at zero. Online logistic gradient updates
+use learning rate 1 and L2 coefficient 0.001 on the seven coefficients. No
+normalization is fitted on evaluation data, and no synapse in the connectome is
+changed. Exact protocol settings and before/after weights accompany each export.
+
+The **untrained control** retains its initial zero weights and uses a reproducible
+random tie-break independent of the target. Both decoders see the same neural
+features and share the tie-breaking draw on each trial. This comparator tests
+the effect of decoder training. An ordinary rule reading the cue directly could
+solve the artificial task perfectly; no shuffled-connectome or conventional
+controller comparison is included, so success does not establish an advantage
+for biological wiring.
+
+**Separate moving and pressing.** In this experiment, the decoder selects a letter,
+an added display controller guides the fly to that key, and an explicit press
+commits it. Transit does not type; repeated letters are allowed. Every decision,
+including errors, is retained. Motion is assisted, not learned locomotion. The
+original free-exploration mode and historical recordings preserve their original
+region-entry typing rules.
+
+The graph shows accuracy in non-overlapping blocks of ten, and the table reports
+all decisions in each phase. Evaluation shows a 95% Wilson interval for trial
+accuracy within that run. These intervals do not quantify variability across
+anatomical brains. Different seeds are technical replicates of one connectome.
+Evaluation outcomes remain visible to the observer, but never update the decoder.
+
+**Export run** downloads all completed trial records (including partial paused
+runs), predictions, targets, neural noise seeds, raw counts/rates/features,
+weights, configuration, and connectivity provenance/hashes. The browser checks
+that evaluation weights remain unchanged before marking a run complete.
+
+Full-connectome development checks used seeds 42, 43, and 44 with the same default
+protocol. Each scored 40/40 on evaluation (per-run 95% Wilson interval 91.2–100%);
+the corresponding untrained controls scored 26/40, 18/40, and 24/40. These are
+developmental checks, not a preregistered study. Raw outputs and complete results
+are in [the benchmark report](results/learning_benchmark/report.md). Reproduce them with:
+
+```bash
+node scripts/benchmark_learning.cjs --seeds 42,43,44 --out results/learning_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs
+```
+
+Implementation: `site/learning-model.js` is the DOM-independent experiment;
+`site/learning-worker.js` schedules bounded work and `site/connectome-loader.js`
+verifies the complete wiring. `site/learning.js` renders the experiment and
+assisted presses. Build `learn.html` and `index.html` with
+`python scripts/build_site.py` from their `site/*head.html` and `site/*body.html`
+templates. Tests cover cue/readout separation, fresh trial state, unchanged
+connectivity, frozen evaluation, independent random streams, unfiltered errors,
+explicit presses, and worker pause/restart/export/error behavior.
+
+This first benchmark is motivated by [connectome reservoir computing](https://pmc.ncbi.nlm.nih.gov/articles/PMC12109256/),
+which used different neuron dynamics and does not validate this implementation.
+Biologically grounded dopamine-modulated plasticity, a broader symbol set,
+unassisted navigation, and sequence recall remain future experiments.
 
 ## Notes and caveats
 

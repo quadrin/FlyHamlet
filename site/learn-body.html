@@ -1,0 +1,58 @@
+<a class="skip-link" href="#learning">Skip to learning experiment</a>
+<div class="desktop-heading"><span>COMPUTATIONAL NEUROBIOLOGY</span><span>EXPERIMENT 03</span></div>
+<div class="workspace learning-workspace">
+  <div class="window-title"><span class="application-icon" aria-hidden="true">f</span><span>FlyHamlet <span class="window-subtitle">— Learning Laboratory</span></span><span class="window-grip" aria-hidden="true"></span></div>
+  <header class="masthead">
+    <div class="identity"><div class="eyebrow">Full connectome <span class="divider">/</span> Two-letter benchmark</div><h1>Learning<span class="wordmark-accent"> lab</span></h1><p>One small step toward “to be.”</p></div>
+    <div class="model-specs"><div><b>139,255</b><span>modeled neurons</span></div><div><b>8</b><span>trainable decoder parameters</span></div></div>
+  </header>
+  <nav class="menubar" aria-label="Workstation sections"><a href="index.html">Free exploration</a><a class="menu-primary" href="learn.html" aria-current="page">Learning lab</a><a href="#protocol">Protocol</a><a class="source-link" href="https://github.com/quadrin/FlyHamlet#experiment-3-two-letter-learning">Source &amp; methods <span aria-hidden="true">↗</span></a></nav>
+  <main id="learning">
+    <div class="replay-heading"><h2><span class="panel-number">01</span> Learn two letters</h2><div class="status"><span class="status-lamp" aria-hidden="true"></span><span id="lab-status" role="status" data-state="paused">Ready for a new experiment</span></div></div>
+    <p class="lab-intro">Can a decoder learn to tell two sensory cues apart after they pass through the fly’s brain model?</p>
+    <div class="signal-path" aria-label="Experimental signal path"><span>Sensory cue <b>T / O</b></span><i aria-hidden="true">→</i><span>Fly connectome <b>fixed</b></span><i aria-hidden="true">→</i><span>Decoder <b>learns</b></span><i aria-hidden="true">→</i><span>Key press <b>assisted</b></span></div>
+    <section class="lab-toolbar" aria-label="Experiment controls">
+      <button id="lab-run" class="play-button">Run experiment</button><button id="lab-new">New experiment</button>
+      <label for="lab-seed">Seed <input id="lab-seed" type="number" min="0" max="4294967295" step="1" inputmode="numeric" autocomplete="off"></label>
+      <label for="lab-speed">Speed <select id="lab-speed" autocomplete="off"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="20">20×</option></select></label>
+      <button id="lab-export" disabled>Export run</button>
+    </section>
+    <div class="lab-load" id="lab-load" hidden><span id="lab-load-message">Loading the full connectome…</span><button id="lab-retry" hidden>Try again</button></div>
+    <ol class="phase-track" aria-label="Experiment phases"><li data-phase="baseline"><b>1. Baseline</b><span>20 trials · updates off</span></li><li data-phase="train"><b>2. Train</b><span>60 trials · updates on</span></li><li data-phase="evaluation"><b>3. Evaluate</b><span>40 fresh trials · weights frozen</span></li></ol>
+    <div class="lab-progress"><progress id="lab-progress" max="120" value="0" aria-label="Completed trials"></progress><span id="lab-progress-text">0 / 120 trials</span><span id="lab-time">0.00 s simulated</span></div>
+    <div class="lab-desk">
+      <section class="machine lab-machine" aria-labelledby="lab-keyboard-title">
+        <div class="machine-top"><span class="machine-wordmark" id="lab-keyboard-title">SEPARATE MOVE &amp; PRESS <span>Transit stays silent. Repeated letters are allowed.</span></span></div>
+        <div class="cue-console"><div><span>Decision cue</span><b id="lab-cue">—</b></div><div><span>Decoder choice</span><b id="lab-choice">—</b></div><div><span>Decoder updates</span><b class="update-display" id="lab-updates">OFF</b></div></div>
+        <div class="lab-keyboard-surround"><div id="lab-keyboard" class="lab-keyboard" aria-hidden="true"></div><img id="lab-fly" src="site/assets/fruit-fly.png" alt="The fly is guided to the decoder’s chosen key" width="110" height="110"></div>
+        <div class="lab-action-bar"><span id="lab-action">Waiting to run</span><span id="lab-rate">Target speed 1×</span></div>
+        <p class="lab-assistance">The decoder chooses the letter. An added controller moves the fly and presses that key; this is assisted typing, not learned navigation.</p>
+      </section>
+      <section class="manuscript lab-manuscript" aria-labelledby="lab-output-heading">
+        <div class="document-title"><span class="document-icon" aria-hidden="true">▤</span><h2 id="lab-output-heading">Unfiltered output</h2><span class="file-type">TXT</span></div>
+        <div class="paper"><div class="paper-heading"><span class="print-label">FLYHAMLET / TRIAL LOG</span><span class="eyebrow" id="lab-output-phase">Awaiting experiment</span></div><div class="paper-rule"></div><div class="typed" id="lab-output" tabindex="0" role="region" aria-label="All typed letters, including mistakes"></div><div class="paper-footer"><span id="lab-presses">0 presses</span><span>Errors retained</span></div></div>
+        <p class="manuscript-note">One explicit press per decision. Moving across a key never adds a letter.</p>
+      </section>
+    </div>
+    <section class="lab-results" aria-labelledby="lab-results-title">
+      <div class="section-heading"><h2 id="lab-results-title"><span class="panel-number">02</span> Does training help?</h2><span class="eyebrow" id="lab-lock">Decoder has not been trained</span></div>
+      <div class="lab-scorecards"><div class="ro left"><span class="readout-label">Evaluation · trained decoder</span><b id="lab-eval-score">—</b><small id="lab-eval-detail">40 trials after training</small></div><div class="ro right"><span class="readout-label">Evaluation · untrained control</span><b id="lab-control-score">—</b><small id="lab-control-detail">Same cues and neural activity</small></div><div class="ro gf"><span class="readout-label">Decoder weight updates</span><b id="lab-update-count">0</b><small id="lab-update-note">Only the training phase changes weights</small></div></div>
+      <div class="oscilloscope"><div class="scope-header"><span class="eyebrow">Accuracy across trials</span><span class="mono">Non-overlapping blocks of 10</span></div><canvas id="lab-chart" role="img" aria-label="Accuracy in blocks of 10 trials for trained and untrained decoders; equivalent phase results are in the table below"></canvas><div class="legend"><span class="legend-left">Trained decoder</span><span class="legend-right">Untrained control</span><span class="line-legend">Dashed reference: 50% chance</span></div></div>
+      <div class="lab-table-wrap"><table class="lab-table"><caption>Phase results. Training accuracy is measured before each weight update.</caption><thead><tr><th scope="col">Phase</th><th scope="col">Trained decoder</th><th scope="col">Untrained control</th><th scope="col">Weight updates</th></tr></thead><tbody><tr><th scope="row">Baseline</th><td id="lab-baseline-accuracy">—</td><td id="lab-baseline-control">—</td><td>Off</td></tr><tr><th scope="row">Training</th><td id="lab-train-accuracy">—</td><td id="lab-train-control">—</td><td>On</td></tr><tr><th scope="row">Evaluation</th><td id="lab-evaluation-accuracy">—</td><td id="lab-evaluation-control">—</td><td>Frozen</td></tr></tbody></table></div>
+      <p class="session-note" id="lab-conclusion">Evaluation keeps the sensory cues available and freezes the decoder. This tests cue decoding, not phrase recall or language understanding.</p>
+    </section>
+    <details class="experiment-notes" id="protocol"><summary><span class="methods-label"><span class="panel-number">03</span> Protocol &amp; scientific limits</span><span class="disclosure-mark" aria-hidden="true">+</span></summary><div class="notes-body">
+      <p><strong>Task.</strong> Each trial presents T or O through a different artificial sensory input: 100 Hz Poisson drive to the annotated left or right LC4 + LPLC2 population. Each phase contains equally many of both letters, shuffled independently. A trial lasts 200 ms. Neural state starts at rest each trial; decoder weights persist.</p>
+      <p><strong>What learns.</strong> A small logistic decoder uses seven downstream neural-rate features and a bias. It never receives the target letter, trial index, seed, or the directly stimulated neurons as features. Predictions are scored before any training update. All 139,255 neurons and 15,091,983 connected pairs remain in the fixed LIF model. No synaptic plasticity or dopamine learning has been added inside the connectome.</p>
+      <p><strong>Test.</strong> After 20 baseline and 60 training trials, weights are locked for 40 evaluation trials with fresh sensory noise. A second decoder keeps its initial weights throughout and sees the same neural features. The 95% Wilson interval describes uncertainty across evaluation trials in this run. New seeds are simulation replicates of one anatomical connectome, not additional biological flies.</p>
+      <p><strong>Interpretation.</strong> An ordinary rule that reads the cue directly could solve this task perfectly. The untrained control tests the effect of decoder training; it does not establish an advantage for biological wiring. Sequence memory, shuffled-connectome comparisons, and biologically grounded learning rules are further experiments. Training and evaluation outcomes remain visible to you, but evaluation outcomes never update the decoder.</p>
+      <p><strong>Reproducibility.</strong> Export the seed, full protocol, connectome hashes, every target and prediction, neural features, and decoder weights. Reusing a seed reproduces a run in this implementation. Page loads default to 1× target speed; computation may run slower on your device.</p>
+      <p>Background: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11446845/">Shiu et al.’s sensorimotor model</a> and <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12109256/">connectome reservoir computing</a>. The latter uses different neural dynamics and does not validate this task.</p>
+    </div></details>
+  </main>
+  <footer class="site-footer"><span>FlyHamlet / Experimental learning bench</span><a href="index.html">Return to free exploration ↗</a></footer>
+</div>
+<noscript><p class="no-script">JavaScript is required to compute this experiment. <a href="https://github.com/quadrin/FlyHamlet#experiment-3-two-letter-learning">Read the protocol on GitHub.</a></p></noscript>
+<script src="site/live-model.js" defer></script>
+<script src="site/learning-model.js?v=1" defer></script>
+<script src="site/learning.js?v=1" defer></script>

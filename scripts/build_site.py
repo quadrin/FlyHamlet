@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the GitHub Pages replay viewer: index.html + site/data/flyNN.json from results/arena."""
+"""Build the GitHub Pages viewer, learning lab, and saved trajectory files."""
 import glob, json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,8 +23,10 @@ def main(arena_dir="results/arena"):
         n += 1
     (ROOT / "index.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/head.html").read_text() + "</head><body>"
                                      + (ROOT / "site/body.html").read_text() + "</body></html>\n")
+    (ROOT / "learn.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/learn-head.html").read_text() + "</head><body>"
+                                    + (ROOT / "site/learn-body.html").read_text() + "</body></html>\n")
     (ROOT / ".nojekyll").write_text("")
-    print(f"wrote index.html and {n} fly data files to site/data/")
+    print(f"wrote index.html, learn.html and {n} fly data files to site/data/")
 
 if __name__ == "__main__":
     main(*sys.argv[1:])

@@ -1,0 +1,437 @@
+.learning-workspace .model-specs {
+  max-width: 310px;
+}
+.lab-intro {
+  font-size: .875rem;
+  margin-bottom: 12px;
+}
+.signal-path {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 13px;
+  background: #eaf1f6;
+  border: 1px solid #9aaebe;
+  box-shadow: inset 0 1px white;
+  font-size: .75rem;
+}
+.signal-path span {
+  flex: 1;
+}
+.signal-path b {
+  display: block;
+  color: #24648e;
+  font: bold .8125rem var(--mono);
+}
+.signal-path i {
+  font-style: normal;
+  color: #597991;
+}
+.lab-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 12px;
+  background: linear-gradient(#e8eff4,#c1d1dd);
+  border: 1px solid #849eb2;
+  box-shadow: inset 0 1px white;
+  border-radius: 4px;
+}
+.lab-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .75rem;
+}
+.lab-toolbar input {
+  width: 124px;
+  min-height: 34px;
+  border: 1px solid #71899d;
+  border-radius: 3px;
+  padding: 5px 7px;
+  color: #223f58;
+  background: #f4f9fc;
+  box-shadow: inset 1px 1px 2px #92aabc66;
+  font: .75rem var(--mono);
+}
+.lab-toolbar #lab-export {
+  margin-left: auto;
+}
+.lab-load {
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid #8ba5b7;
+  background: #f0f6fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: .8125rem;
+}
+.lab-load.is-error {
+  border-color: #a45240;
+  color: #793527;
+}
+.phase-track {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+  padding: 0;
+  margin: 15px 0 8px;
+}
+.phase-track li {
+  border: 1px solid #a3b4c3;
+  background: #e8eff4;
+  box-shadow: inset 0 1px white;
+  padding: 8px 12px;
+  color: #496174;
+  font-size: .8125rem;
+}
+.phase-track b, .phase-track span {
+  display: block;
+}
+.phase-track span {
+  font-size: .6875rem;
+  margin-top: 3px;
+}
+.phase-track .is-current {
+  border-color: #3576a4;
+  color: #133e5d;
+  background: #deeff9;
+  box-shadow: inset 0 3px #3e86b2,inset 0 -1px white;
+}
+.phase-track .is-complete {
+  background: #e3ede7;
+  color: #365748;
+  border-color: #9aae9e;
+}
+.lab-progress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font: .6875rem var(--mono);
+  color: #405a6f;
+  margin: 10px 1px 16px;
+}
+.lab-progress progress {
+  flex: 1;
+  height: 12px;
+  min-width: 130px;
+  accent-color: #397fa5;
+}
+.lab-desk {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 290px;
+  gap: 17px;
+  align-items: start;
+}
+.lab-machine .machine-wordmark > span {
+  font: .6875rem Tahoma,sans-serif;
+  letter-spacing: 0;
+}
+.cue-console {
+  margin: 0 17px 13px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+  border: 1px solid #6c8796;
+  border-radius: 4px;
+  background: linear-gradient(#d1e0df,#edf4ec);
+  box-shadow: inset 0 2px 4px #4f6a7555,0 1px white;
+}
+.cue-console span {
+  display: block;
+  color: #3c5965;
+  font-size: .6875rem;
+}
+.cue-console b {
+  font: 1.4rem var(--mono);
+  color: #234d61;
+}
+.cue-console .update-display {
+  font-size: .875rem;
+  line-height: 2.5;
+}
+.lab-keyboard-surround {
+  margin: 0 17px;
+  position: relative;
+  padding: 11px 9px 17px;
+  background: linear-gradient(#536773,#7e9098);
+  border: 1px solid #697b89;
+  border-radius: 7px;
+  box-shadow: inset 0 3px 7px #243f50b3,0 2px #f6fafc;
+}
+.lab-keyboard {
+  display: grid;
+  grid-template-columns: repeat(9,minmax(0,1fr));
+  grid-template-rows: repeat(3,minmax(0,1fr));
+  aspect-ratio: 3 / 1;
+}
+.lab-keyboard .keycap {
+  padding: 4px;
+}
+.lab-keyboard .keycap:not(.task-key) .key-label {
+  color: #627580;
+}
+.lab-keyboard .task-key .key-label {
+  color: #144a6e;
+  font-weight: bold;
+}
+.lab-keyboard .task-key .key-face {
+  border-color: #9bbecf;
+}
+.lab-keyboard .is-pressed .key-face {
+  transform: translateY(4px);
+  background: linear-gradient(120deg,#75b6d2,#d0eef3 42%,#98cbdc);
+  box-shadow: inset 0 1px white,0 2px #6c9aa9,0 3px 3px #233c4b99;
+}
+#lab-fly {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  width: clamp(55px,9vw,110px);
+  height: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%) rotate(90deg);
+  filter: drop-shadow(4px 7px 3px #19334066);
+}
+.lab-action-bar {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 11px 18px 8px;
+  font: .6875rem var(--mono);
+}
+.lab-assistance {
+  border-top: 1px solid #a7b8c6;
+  box-shadow: inset 0 1px white;
+  padding: 10px 17px 12px;
+  font-size: .75rem;
+  color: #3f596d;
+  background: #d5e1e9;
+}
+.lab-manuscript .paper {
+  min-height: 235px;
+}
+.lab-manuscript .typed {
+  min-height: 100px;
+  max-height: 230px;
+  font-size: .875rem;
+}
+.lab-transcript-group {
+  display: block;
+  margin-bottom: 10px;
+}
+.lab-transcript-label {
+  display: block;
+  font: .625rem var(--mono);
+  color: #466775;
+  text-transform: uppercase;
+  margin: 0 0 5px;
+}
+.lab-transcript-text {
+  overflow-wrap: anywhere;
+}
+.lab-results {
+  margin-top: 24px;
+}
+.lab-scorecards {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.lab-scorecards .ro b {
+  font-size: 1.4rem;
+}
+.lab-scorecards .ro small {
+  font-size: .6875rem;
+  white-space: normal;
+}
+#lab-chart {
+  width: 100%;
+  height: 210px;
+  display: block;
+}
+.lab-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.lab-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .75rem;
+  background: #eaf0f5;
+}
+.lab-table caption {
+  caption-side: bottom;
+  text-align: left;
+  padding: 8px 0 0;
+  color: #465e73;
+  font-size: .6875rem;
+}
+.lab-table th, .lab-table td {
+  text-align: left;
+  border: 1px solid #a6b7c5;
+  padding: 8px 10px;
+}
+.lab-table thead {
+  background: linear-gradient(#f7fafb,#d0dee8);
+}
+.lab-table tbody th {
+  font-weight: normal;
+}
+.lab-table td {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width:1000px) {
+  .lab-desk {
+    grid-template-columns: minmax(0,1fr);
+  }
+  .lab-manuscript .paper {
+    min-height: 160px;
+  }
+  .lab-manuscript .typed {
+    min-height: 50px;
+    max-height: 130px;
+  }
+  .lab-transcript-group {
+    display: inline-block;
+    vertical-align: top;
+    width: 32%;
+    padding-right: 12px;
+  }
+  .lab-toolbar #lab-export {
+    margin-left: 0;
+  }
+}
+@media (max-width:560px) {
+  .learning-workspace .model-specs {
+    display: none;
+  }
+  .signal-path {
+    gap: 8px;
+    padding: 9px;
+    font-size: .6875rem;
+  }
+  .signal-path span {
+    flex-basis: 35%;
+  }
+  .signal-path i:nth-of-type(2) {
+    display: none;
+  }
+  .lab-intro {
+    font-size: .8125rem;
+  }
+  .lab-toolbar {
+    padding: 9px;
+    gap: 9px;
+  }
+  .lab-toolbar input {
+    width: 116px;
+  }
+  .phase-track {
+    gap: 5px;
+  }
+  .phase-track li {
+    padding: 8px 6px;
+    font-size: .6875rem;
+  }
+  .phase-track span {
+    font-size: .625rem;
+  }
+  .lab-progress {
+    font-size: .625rem;
+    gap: 6px;
+  }
+  .lab-progress progress {
+    flex-basis: 100%;
+  }
+  .lab-progress #lab-time {
+    margin-left: auto;
+  }
+  .cue-console {
+    margin-inline: 9px;
+    padding: 8px;
+    gap: 6px;
+  }
+  .cue-console span {
+    font-size: .625rem;
+  }
+  .lab-machine .machine-wordmark {
+    font-size: .6875rem;
+  }
+  .lab-machine .machine-wordmark > span {
+    font-size: .625rem;
+  }
+  .lab-keyboard-surround {
+    margin-inline: 9px;
+    padding: 6px 4px 10px;
+  }
+  .lab-keyboard .keycap {
+    padding: 2px;
+  }
+  .lab-action-bar {
+    padding-inline: 10px;
+    font-size: .625rem;
+  }
+  .lab-assistance {
+    padding-inline: 10px;
+    font-size: .6875rem;
+  }
+  .lab-scorecards {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .lab-scorecards .ro:last-child {
+    grid-column: 1 / -1;
+  }
+  .lab-scorecards .ro b {
+    font-size: 1.125rem;
+  }
+  .lab-scorecards .readout-label {
+    font-size: .625rem;
+  }
+  .lab-scorecards .ro small {
+    font-size: .625rem;
+  }
+  .lab-table {
+    font-size: .625rem;
+  }
+  .lab-table th,.lab-table td {
+    padding: 7px 5px;
+  }
+  .lab-table caption {
+    font-size: .625rem;
+  }
+  .lab-transcript-group {
+    display: block;
+    width: auto;
+    padding-right: 0;
+  }
+  .lab-manuscript .typed {
+    max-height: 180px;
+  }
+  #lab-chart {
+    height: 195px;
+  }
+  .lab-results .section-heading .eyebrow {
+    font-size: .625rem;
+  }
+  .learning-workspace .menubar .source-link {
+    margin-left: 0;
+  }
+  .scope-header {
+    gap: 8px;
+  }
+  .scope-header .mono {
+    font-size: .5625rem;
+  }
+}
