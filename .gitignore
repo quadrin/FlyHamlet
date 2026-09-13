@@ -1,0 +1,9 @@
+data/raw/
+data/cache/
+results/**/*.parquet
+results/**/*.bin
+results/**/*.npz
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/

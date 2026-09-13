@@ -1,0 +1,110 @@
+# FlyHamlet configuration. Every gain, rate and seed lives here.
+
+data:
+  raw_dir: data/raw
+  cache_dir: data/cache
+  version: 783
+  base_url: https://storage.googleapis.com/flywire-data/codex/data/fafb/783
+  # Public FlyWire v783 release tables served by Codex (codex.flywire.ai).
+  files:
+    neurons: neurons.csv.gz
+    connections: connections_no_threshold.csv.gz       # all synapses, no per-pair threshold (as in Shiu et al. 2024)
+    classification: classification_with_fw_and_hemibrain_types.csv.gz
+    consolidated_types: consolidated_cell_types.csv.gz
+    labels: labels.csv.gz
+    names: names.csv.gz
+  # Neurotransmitter -> synaptic sign. Shiu et al. 2024: ACh, DA, OCT, SER excitatory; GABA, GLUT inhibitory.
+  nt_sign: {ACH: 1, DA: 1, OCT: 1, SER: 1, GABA: -1, GLUT: -1}
+  # Neurons with no nt prediction in neurons.csv fall back to the synapse-count-weighted
+  # majority nt of their output connections; if still unknown, this sign is used.
+  unknown_nt_sign: 1
+
+sim:
+  # Shiu et al. 2024 (Nature) Brian2 model parameters
+  dt_ms: 0.1              # Brian2 default clock
+  v_rest_mV: -52.0        # v_0
+  v_reset_mV: -52.0       # v_rst
+  v_thresh_mV: -45.0      # v_th
+  tau_mem_ms: 20.0        # t_mbr
+  tau_syn_ms: 5.0         # tau
+  t_refractory_ms: 2.2    # t_rfc
+  delay_ms: 1.8           # t_dly
+  w_syn_mV: 0.275         # weight per synapse; connection weight = sign * syn_count * w_syn
+  poisson_weight_mV: 68.75   # w_syn * f_poi (0.275 * 250): a single Poisson event forces a spike
+  seed: 0
+  dtype: float32
+  # Background Poisson drive (off by default). Each neuron receives independent Poisson
+  # events at `rate_hz`, each adding `weight_mV` to the synaptic variable g.
+  background:
+    enabled: false
+    rate_hz: 0.0
+    weight_mV: 0.0
+    # optional: restrict to a super_class list, e.g. [central]; null = all neurons
+    super_classes: null
+
+validation:
+  # Right-hemisphere labellar sugar GRNs used by Shiu et al. 2024 (figures.ipynb).
+  # 720575940620900446 is absent from v783 and is dropped by the loader.
+  sugar_grn_ids: [720575940624963786, 720575940630233916, 720575940637568838, 720575940638202345,
+                  720575940617000768, 720575940630797113, 720575940632889389, 720575940621754367,
+                  720575940621502051, 720575940640649691, 720575940639332736, 720575940616885538,
+                  720575940639198653, 720575940620900446, 720575940617937543, 720575940632425919,
+                  720575940633143833, 720575940612670570, 720575940628853239, 720575940629176663,
+                  720575940611875570]
+  mn9_ids: [720575940618238523, 720575940660219265]   # MN9 left / right in v783 (labels.csv "Motor neuron 9; MN9")
+  rates_hz: [10, 25, 50, 75, 100, 125, 150, 175, 200]
+  t_run_s: 1.0
+  n_trials: 5
+  seed: 1
+
+arena:
+  width: 90.0            # arena units (mm)
+  height: 30.0
+  n_flies: 4
+  seed: 42               # fly i uses seed + i
+  duration_s: 60.0
+  motor:
+    window_ms: 50.0          # spike-count smoothing window
+    speed_gain: 2.0          # mm/s per (Hz of mean forward-DN rate)
+    turn_gain: 30.0          # deg/s per Hz of (left - right) turning-DN rate difference
+    max_speed: 25.0          # mm/s
+    max_turn_deg_s: 720.0
+    base_speed: 0.0          # mm/s added regardless of DN activity
+    forward_types: [DNp09, MDN]      # verified in consolidated_cell_types (v783)
+    turn_types: [DNa02]              # verified in consolidated_cell_types (v783)
+    turn_sign: 1.0           # +1: right-DN excess turns right (clockwise, heading decreases)
+  looming:
+    types: [LC4, LPLC2]      # optic-glomerulus looming detectors -> giant fiber (verified in v783)
+    wall_distance_mm: 8.0    # input starts when the wall is closer than this
+    max_rate_hz: 150.0       # Poisson rate at the wall
+    exponent: 2.0            # rate = max_rate * (1 - d/wall_distance)^exponent
+    eye_half_angle_deg: 90.0 # a wall counts for an eye if within this angle of heading on that side
+  typewriter:
+    rows: 3
+    cols: 9
+    alphabet: "abcdefghijklmnopqrstuvwxyz "
+    layout_seed: 7
+  live_view: false
+  log_dir: results/arena
+
+entropy_tap:
+  enabled: false
+  n_neurons: 500
+  seed: 3
+  out_path: results/entropy/isi.bin
+  # super_classes eligible for sampling; sensory/motor/descending/visual pathways are excluded
+  pool_super_classes: [central]
+  # sensory drive strength while tapping (background noise is what makes the tap non-deterministic)
+  background:
+    enabled: true
+    rate_hz: 20.0
+    weight_mV: 1.0
+    super_classes: null
+  duration_s: 60.0
+
+analysis:
+  hamlet_url: https://www.gutenberg.org/cache/epub/1524/pg1524.txt
+  hamlet_cache: data/cache/hamlet.txt
+  null_walk_steps: 1000000
+  null_seed: 11
+  whiten_batch: 64

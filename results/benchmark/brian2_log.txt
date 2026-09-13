@@ -1,0 +1,44 @@
+>>> Experiment:     sugarR_50Hz
+    Output file:    results/benchmark/brian2/sugarR_50Hz.parquet
+    Excited neurons: 20
+    Elapsed time:   171 s
+rate 50 Hz: 172 s wall for 2 trials of 1 s
+>>> Experiment:     sugarR_100Hz
+    Output file:    results/benchmark/brian2/sugarR_100Hz.parquet
+    Excited neurons: 20
+    Elapsed time:   137 s
+rate 100 Hz: 138 s wall for 2 trials of 1 s
+>>> Experiment:     sugarR_150Hz
+    Output file:    results/benchmark/brian2/sugarR_150Hz.parquet
+    Excited neurons: 20
+    Elapsed time:   132 s
+rate 150 Hz: 133 s wall for 2 trials of 1 s
+>>> Experiment:     sugarR_200Hz
+    Output file:    results/benchmark/brian2/sugarR_200Hz.parquet
+    Excited neurons: 20
+    Elapsed time:   142 s
+rate 200 Hz: 143 s wall for 2 trials of 1 s
+MN9 rates (Hz):
+exp_name            sugarR_100Hz  sugarR_150Hz  sugarR_200Hz  sugarR_50Hz
+flyid                                                                    
+720575940660219265          62.0          88.5          90.0         14.5
+720575940645521262           0.0           0.0           0.0          0.0
+n active neurons per condition: {'sugarR_100Hz': 366, 'sugarR_150Hz': 385, 'sugarR_200Hz': 415, 'sugarR_50Hz': 276}
+top 15 at max rate:
+exp_name            sugarR_100Hz  sugarR_150Hz  sugarR_200Hz  sugarR_50Hz
+flyid                                                                    
+720575940622695448         110.5         132.5         148.5         75.0
+720575940627383685          97.0         120.0         135.5         63.5
+720575940629888530          94.0         117.5         139.0         62.0
+720575940621502051          89.5         143.0         199.5         59.0
+720575940633143833         107.5         158.5         170.5         59.0
+720575940640649691         110.5         171.5         196.5         58.0
+720575940612670570          95.0         140.0         193.5         57.5
+720575940628853239         100.0         141.5         187.0         56.0
+720575940630797113          95.5         140.5         198.0         55.5
+720575940629176663         109.0         160.5         200.0         53.5
+720575940616885538          90.0         142.0         188.5         52.5
+720575940624963786         111.5         152.0         209.5         52.5
+720575940619973712          85.0         105.5         119.0         52.0
+720575940611875570         100.5         153.0         186.5         51.0
+720575940617937543          93.5         153.5         198.5         51.0
