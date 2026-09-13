@@ -1,32 +1,32 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#202823">
+<meta name="theme-color" content="#c6d0da">
 <meta name="description" content="Start a fresh live simulation of the full fruit-fly connectome. Watch newly computed neural activity, movement, and typing, or compare four saved runs.">
-<title>FlyHamlet — The connectome typewriter</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Special+Elite&display=swap">
-<link rel="stylesheet" href="site/style.css?v=live-1">
+<title>FlyHamlet — Connectome Workstation</title>
+<link rel="stylesheet" href="site/style.css?v=workstation-1">
 </head><body><a class="skip-link" href="#replay">Skip to replay</a>
+<div class="desktop-heading"><span>COMPUTATIONAL NEUROBIOLOGY</span><span>FlyWire v783</span></div>
 <div class="workspace">
+  <div class="window-title"><span class="application-icon" aria-hidden="true">f</span><span>FlyHamlet <span class="window-subtitle">— Connectome Workstation</span></span><span class="window-grip" aria-hidden="true"></span></div>
   <header class="masthead">
     <div class="identity">
-      <div class="eyebrow">FlyWire v783 <span class="divider">/</span> <span id="session-kind">Live simulation</span></div>
-      <h1>FlyHamlet<span class="title-period">.</span></h1>
+      <div class="eyebrow">Whole-brain model <span class="divider">/</span> <span id="session-kind">Live simulation</span></div>
+      <h1>Fly<span class="wordmark-accent">Hamlet</span></h1>
       <p>A fruit-fly brain at the keyboard.</p>
     </div>
-    <a class="source-link" href="https://github.com/quadrin/FlyHamlet#readme">The experiment &amp; source <span aria-hidden="true">↗</span></a>
+    <div class="model-specs" aria-label="Model size"><div><b>139,255</b><span>neurons</span></div><div><b>15.1 M</b><span>connected pairs</span></div></div>
   </header>
+  <nav class="menubar" aria-label="Workstation sections"><a class="menu-primary" href="#replay">Experiment</a><a href="#signals-heading">Neural activity</a><a href="#methods">Methods</a><a class="source-link" href="https://github.com/quadrin/FlyHamlet#readme">Source &amp; results <span aria-hidden="true">↗</span></a></nav>
   <main id="replay">
     <div class="replay-heading">
-      <h2 class="eyebrow">The connectome typewriter</h2>
+      <h2 class="eyebrow"><span class="panel-number">01</span> Behavioral arena</h2>
       <div class="status"><span class="status-lamp" aria-hidden="true"></span><span id="status" role="status">Loading brain wiring</span></div>
     </div>
     <div class="writing-desk">
       <section class="machine" aria-label="Keyboard arena and session controls">
         <div class="machine-top">
-          <span class="machine-wordmark">FlyHamlet <span>MODEL 783</span></span>
+          <span class="machine-wordmark">TYPEWRITER <span>90 × 30 mm / 27 regions</span></span>
           <div class="specimen-select"><label for="fly">Session</label><select id="fly" aria-label="Session"><option value="live" selected>Live session</option><optgroup label="Saved recordings"><option value="00">Recorded fly 00</option><option value="01">Recorded fly 01</option><option value="02">Recorded fly 02</option><option value="03">Recorded fly 03</option></optgroup></select></div>
         </div>
         <div class="keyboard-deck">
@@ -51,9 +51,9 @@
         </div>
       </section>
       <section class="manuscript" aria-labelledby="typed-heading">
-        <div class="paper-clip" aria-hidden="true"></div>
+        <div class="document-title"><span class="document-icon" aria-hidden="true">▤</span><h2 id="typed-heading">Manuscript output</h2><span class="file-type">TXT</span></div>
         <div class="paper">
-          <div class="paper-heading"><h2 id="typed-heading">The manuscript</h2><span id="manuscript-state" class="eyebrow">In progress</span></div>
+          <div class="paper-heading"><span class="print-label">FLYHAMLET / TRANSCRIPT</span><span id="manuscript-state" class="eyebrow">In progress</span></div>
           <div class="paper-rule"></div>
           <div id="typed" class="typed" tabindex="0" role="region" aria-label="Typed manuscript; scroll to read earlier keystrokes"><span class="cursor"></span></div>
           <div class="paper-footer"><span><b id="typed-count">0</b> keystrokes</span><span id="recording-total" hidden>of <b id="f-keys">—</b></span></div>
@@ -63,7 +63,7 @@
     </div>
     <p id="session-note" class="session-note">New session resets the brain and starts with a fresh random seed. Speed depends on your device.</p>
     <section class="neural-section" aria-labelledby="signals-heading">
-      <div class="section-heading"><h2 id="signals-heading">Inside the brain</h2><span class="eyebrow"><span id="f-spikes">—</span> spikes simulated</span></div>
+      <div class="section-heading"><h2 id="signals-heading"><span class="panel-number">02</span> Neural activity monitor</h2><span class="eyebrow"><span id="f-spikes">—</span> spikes simulated</span></div>
       <div class="readouts" aria-live="off">
         <div class="ro left"><span class="readout-label">Left eye</span><b id="r-loomL">0.0 Hz</b><small>Looming input</small></div>
         <div class="ro right"><span class="readout-label">Right eye</span><b id="r-loomR">0.0 Hz</b><small>Looming input</small></div>
@@ -73,13 +73,13 @@
         <div class="ro motion"><span class="readout-label">Speed · turn</span><b id="r-motion">8.0 mm/s · 0°/s</b><small>Decoded motion</small></div>
       </div>
       <div class="oscilloscope">
-        <div class="scope-header"><span class="eyebrow">Neural activity</span><span class="mono">Last 20 seconds</span></div>
+        <div class="scope-header"><span class="eyebrow">Signal trace <span class="scope-unit">/ Hz</span></span><span class="mono">20 s window</span></div>
         <canvas id="strip" class="strip" role="img" aria-label="Rolling 20-second chart of looming input, turning descending-neuron rates, and giant fiber rate in hertz"></canvas>
         <div class="legend"><span class="legend-left">Left</span><span class="legend-right">Right</span><span class="legend-gf">Giant fiber</span><span class="line-legend">Solid: looming <span class="caption-divider">/</span> Dashed: turning neurons</span></div>
       </div>
     </section>
-    <details class="experiment-notes">
-      <summary>About this experiment <span aria-hidden="true">+</span></summary>
+    <details id="methods" class="experiment-notes">
+      <summary><span class="methods-label"><span class="panel-number">03</span> Experiment notes &amp; methods</span><span class="disclosure-mark" aria-hidden="true">+</span></summary>
       <div class="notes-body">
         <p>The live session computes a fresh run of the full FlyWire v783 connectome: 139,255 neurons and 15,091,983 connected pairs. Neurons use the repository’s leaky integrate-and-fire model at 0.1 ms steps. Letters are assigned to the 90 × 30 mm arena’s 3 × 9 grid by a seeded permutation. Saved 300-second recordings remain available in the session menu.</p>
         <p>The fly walks at a base speed of 8 mm/s. Nearby walls send proximity-scaled Poisson input to the eye’s LC4 + LPLC2 looming detectors; the network drives turning neurons on the opposite side, steering the fly away. Turning rates use a 50 ms window. The giant-fiber escape signal is recorded but does not control walking.</p>
@@ -90,5 +90,5 @@
   <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> 139,255 neurons. A new session every time.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
 </div>
 <noscript><p class="no-script">Enable JavaScript to run the live simulator or watch saved recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
-<script src="site/replay.js?v=live-2" defer></script>
+<script src="site/replay.js?v=workstation-1" defer></script>
 </body></html>
