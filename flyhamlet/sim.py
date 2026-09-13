@@ -108,27 +108,32 @@ def resolve_target(c: Connectome, target, side: str | None = None) -> np.ndarray
 
 # --------------------------------------------------------------------------- numba kernels
 if HAVE_NUMBA:
-    @_nb.njit(cache=True, fastmath=False)
-    def _nb_integrate(v, g, i_ext, rfc_left, frozen, v0, a, b, cc, v_th, spikes_out):
-        """Exact LIF integration for one step + threshold. Returns number of spikes.
-        ``frozen[i]`` is set when neuron i was refractory in this step (its inputs are dropped)."""
+    @_nb.njit(cache=True, parallel=True, fastmath=False)
+    def _nb_integrate(v, g, i_ext, rfc_left, frozen, spk_mask, v0, a, b, cc, v_th, eps):
+        """Exact LIF integration of every neuron for one step (parallel over neurons).
+
+        ``frozen[i]`` marks neurons that were refractory in this step (their synaptic
+        inputs are dropped); ``spk_mask[i]`` marks threshold crossings.  A neuron whose
+        state decayed to within ``eps`` of rest is snapped to rest (same rule in all backends).
+        """
         n = v.shape[0]
-        k = 0
-        for i in range(n):
+        for i in _nb.prange(n):
             if rfc_left[i] > 0:
                 rfc_left[i] -= 1
                 frozen[i] = True
-                continue
-            frozen[i] = False
-            gi = g[i]
-            ss = v0 + i_ext[i]
-            vi = ss + a * (v[i] - ss) + b * gi
-            v[i] = vi
-            g[i] = cc * gi
-            if vi > v_th:
-                spikes_out[k] = i
-                k += 1
-        return k
+                spk_mask[i] = False
+            else:
+                frozen[i] = False
+                gi = g[i]
+                ie = i_ext[i]
+                ss = v0 + ie
+                vi = ss + a * (v[i] - ss) + b * gi
+                gi = cc * gi
+                if ie == 0 and abs(vi - v0) < eps and abs(gi) < eps:
+                    vi = v0; gi = 0.0
+                v[i] = vi
+                g[i] = gi
+                spk_mask[i] = vi > v_th
 
     @_nb.njit(cache=True)
     def _nb_deliver(indptr, indices, w, spikes, g, frozen):
@@ -141,14 +146,16 @@ if HAVE_NUMBA:
     @_nb.njit(cache=True)
     def _nb_add_at(x, idx, val, frozen):
         for i in range(idx.shape[0]):
-            if not frozen[idx[i]]:
-                x[idx[i]] += val
+            j = idx[i]
+            if not frozen[j]:
+                x[j] += val
 
     @_nb.njit(cache=True)
     def _nb_add_at_w(x, idx, vals, frozen):
         for i in range(idx.shape[0]):
-            if not frozen[idx[i]]:
-                x[idx[i]] += vals[i]
+            j = idx[i]
+            if not frozen[j]:
+                x[j] += vals[i]
 
     @_nb.njit(cache=True)
     def _nb_reset(v, g, rfc_left, rfc_steps, spikes, v_rst):
@@ -263,6 +270,8 @@ class LIFNetwork:
         self.i_ext = np.zeros(self.n, dtype=dtype)
         self.rfc_left = np.zeros(self.n, dtype=np.int32)
         self.frozen = np.zeros(self.n, dtype=bool)      # refractory during the current step
+        self.rest_eps = float(sim_cfg.get("rest_eps_mV", 1e-5))   # snap-to-rest tolerance
+        self._spk_mask = np.zeros(self.n, dtype=bool)
         self.rfc_steps = np.full(self.n, self.rfc_default, dtype=np.int32)
         self.silenced = np.zeros(self.n, dtype=bool)
         self._spike_buf = np.zeros(self.n, dtype=np.int64)
@@ -426,9 +435,10 @@ class LIFNetwork:
         return spikes
 
     def _step_numba(self) -> np.ndarray:
-        k = _nb_integrate(self.v, self.g, self.i_ext, self.rfc_left, self.frozen, self.v0, self.a, self.b,
-                          self.cc, self.v_th, self._spike_buf)
-        spikes = self._spike_buf[:k].copy()
+        _nb_integrate(self.v, self.g, self.i_ext, self.rfc_left, self.frozen, self._spk_mask, self.v0, self.a, self.b,
+                      self.cc, self.v_th, self.rest_eps)
+        spikes = np.flatnonzero(self._spk_mask)
+        k = len(spikes)
         # synapses slot: delayed deliveries + Poisson events (dropped on refractory targets)
         due = self.queue.pop(0)
         if len(due):
@@ -453,6 +463,8 @@ class LIFNetwork:
         self.v = np.where(active, vn, self.v).astype(self.dtype)
         self.g = np.where(active, self.cc * self.g, self.g).astype(self.dtype)
         spikes = np.flatnonzero(active & (self.v > self.v_th))
+        rest = active & (self.i_ext == 0) & (np.abs(self.v - self.v0) < self.rest_eps) & (np.abs(self.g) < self.rest_eps)
+        self.v[rest] = self.v0; self.g[rest] = 0
         due = self.queue.pop(0)
         if len(due):
             starts, ends = self.indptr[due], self.indptr[due + 1]
@@ -483,6 +495,9 @@ class LIFNetwork:
         self.t_v = t.where(active, vn, self.t_v)
         self.t_g = t.where(active, self.cc * self.t_g, self.t_g)
         spk_t = t.nonzero(active & (self.t_v > self.v_th)).flatten()
+        rest = active & (self.t_iext == 0) & ((self.t_v - self.v0).abs() < self.rest_eps) & (self.t_g.abs() < self.rest_eps)
+        self.t_v = t.where(rest, t.full_like(self.t_v, float(self.v0)), self.t_v)
+        self.t_g = t.where(rest, t.zeros_like(self.t_g), self.t_g)
         due = self.queue.pop(0)
         if len(due):
             due_t = t.as_tensor(due, device=self.device)

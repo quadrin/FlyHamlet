@@ -4,9 +4,9 @@ Full v783 connectome (139,255 neurons, 15.09M connections), dt = 0.1 ms, 20 suga
 
 | backend | wall (s) | ms / step | x real time | spikes | active neurons | MN9 L/R (Hz) | identical spikes |
 |---|---|---|---|---|---|---|---|
-| numba | 3.3 | 0.329 | 3.3x | 15647 | 377 | 59/98 | yes |
-| numpy | 11.2 | 1.125 | 11.2x | 15647 | 377 | 59/98 | yes |
-| torch | 13.5 | 1.352 | 13.5x | 15647 | 377 | 59/98 | yes |
+| numba | 3.9 | 0.392 | 3.9x | 12255 | 371 | 52/76 | yes |
+| numpy | 11.0 | 1.105 | 11.0x | 12255 | 371 | 52/76 | yes |
+| torch | 39.5 | 3.946 | 39.5x | 12255 | 371 | 52/76 | yes |
 
 Brian2 2.9.0 reference (Shiu et al. model.py, cython codegen, 1 process, includes network build per trial):
 

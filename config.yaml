@@ -58,27 +58,34 @@ validation:
   seed: 1
 
 arena:
-  width: 90.0            # arena units (mm)
-  height: 30.0
+  width_mm: 90.0
+  height_mm: 30.0
   n_flies: 4
-  seed: 42               # fly i uses seed + i
-  duration_s: 60.0
+  seed: 42                   # fly i uses seed + i
+  duration_s: 300.0
+  control_interval_ms: 1.0   # motor decode / sensory update period
+  log_interval_ms: 10.0      # trajectory sampling period
+  start: random              # random | center
   motor:
-    window_ms: 50.0          # spike-count smoothing window
-    speed_gain: 2.0          # mm/s per (Hz of mean forward-DN rate)
-    turn_gain: 30.0          # deg/s per Hz of (left - right) turning-DN rate difference
-    max_speed: 25.0          # mm/s
+    window_ms: 50.0          # spike-count smoothing window for DN rates
+    base_speed_mm_s: 8.0     # forward speed with silent descending neurons
+    speed_gain: 1.0          # mm/s per Hz of mean forward-DN rate (DNp09)
+    backward_gain: 1.0       # mm/s per Hz of mean MDN rate (moonwalker DNs drive backward walking)
+    turn_gain: 12.0          # deg/s per Hz of (left - right) turning-DN rate difference
+    max_speed_mm_s: 25.0
     max_turn_deg_s: 720.0
-    base_speed: 0.0          # mm/s added regardless of DN activity
-    forward_types: [DNp09, MDN]      # verified in consolidated_cell_types (v783)
-    turn_types: [DNa02]              # verified in consolidated_cell_types (v783)
-    turn_sign: 1.0           # +1: right-DN excess turns right (clockwise, heading decreases)
+    # Verified in v783 consolidated_cell_types; chosen by the looming screen (docs/phase2_dn_screen.md):
+    # DNa02 and DNa01 respond to contralateral looming, DNp09 weakly ipsilateral, MDN bilateral.
+    forward_types: [DNp09]
+    backward_types: [MDN]
+    turn_types: [DNa02, DNa01]
+    turn_sign: 1.0           # +1: excess activity in the LEFT turning DNs turns LEFT (Rayshubskiy et al. 2020)
   looming:
-    types: [LC4, LPLC2]      # optic-glomerulus looming detectors -> giant fiber (verified in v783)
-    wall_distance_mm: 8.0    # input starts when the wall is closer than this
+    types: [LC4, LPLC2]      # looming-sensitive optic glomeruli -> giant fiber (DNp01); verified in v783
+    wall_distance_mm: 10.0   # input starts when a wall is closer than this along an eye's rays
     max_rate_hz: 150.0       # Poisson rate at the wall
     exponent: 2.0            # rate = max_rate * (1 - d/wall_distance)^exponent
-    eye_half_angle_deg: 90.0 # a wall counts for an eye if within this angle of heading on that side
+    eye_ray_angles_deg: [0, 20, 45, 70, 95]   # rays per eye, relative to heading, mirrored for the two eyes
   typewriter:
     rows: 3
     cols: 9
@@ -88,19 +95,21 @@ arena:
   log_dir: results/arena
 
 entropy_tap:
-  enabled: false
   n_neurons: 500
   seed: 3
-  out_path: results/entropy/isi.bin
-  # super_classes eligible for sampling; sensory/motor/descending/visual pathways are excluded
+  out_path: results/entropy/isi.bin        # one file per fly: isi_flyNN.bin (+ isi_flyNN_neurons.csv)
+  # Sampling pool: central-brain neurons. Neurons of the wired sensory/motor types (looming
+  # inputs, turning/forward/backward DNs, giant fiber) and their direct synaptic partners are excluded.
   pool_super_classes: [central]
-  # sensory drive strength while tapping (background noise is what makes the tap non-deterministic)
+  # Poisson background drive while tapping. Without it (and without arena input) the network is
+  # silent and deterministic: the tap's randomness comes from this noise and the arena inputs.
+  # 200 Hz x 4 mV events on g give central neurons a median ~1 Hz / mean ~14 Hz without runaway.
   background:
     enabled: true
-    rate_hz: 20.0
-    weight_mV: 1.0
+    rate_hz: 200.0
+    weight_mV: 4.0
     super_classes: null
-  duration_s: 60.0
+  duration_s: 120.0
 
 analysis:
   hamlet_url: https://www.gutenberg.org/cache/epub/1524/pg1524.txt
