@@ -218,7 +218,7 @@ def analyse(seqs: list[np.ndarray], durations: list[float], letters: list[str] |
     n = len(allseq)
     visits = np.bincount(allseq, minlength=K)
     T = sum((transition_counts(s) for s in seqs), np.zeros((K, K), dtype=np.int64))
-    res = dict(n_keystrokes=int(n), total_time_s=float(sum(durations)),
+    res = dict(n_keystrokes=int(n), total_time_s=float(sum(durations)), rows=rows, cols=cols,
                rate_per_s=float(n / sum(durations)) if sum(durations) > 0 else float("nan"),
                H0_plugin=plugin_entropy_bits(visits), H0_miller_madow=miller_madow_bits(visits),
                H_cond_plugin=conditional_entropy_bits(T), H_cond_miller_madow=conditional_entropy_bits(T, "miller_madow"),
@@ -245,6 +245,14 @@ def analyse(seqs: list[np.ndarray], durations: list[float], letters: list[str] |
         lp, zero, ntr = log2_prob_under_model(hamlet, p0, P)
         hres = dict(len=len(hamlet), n_transitions=ntr, log2_prob=lp, zero_pairs=zero,
                     log10_27_pow_len=len(hamlet) * math.log10(K))
+        if letters is not None:   # geometry: which Hamlet pairs are even possible on this key grid?
+            pos = {IDX[l]: divmod(k, cols) for k, l in enumerate(letters)}
+            Th = transition_counts(encode(hamlet))
+            need = [(i, j) for i, j in zip(*np.nonzero(Th))]
+            adj = [(i, j) for i, j in need if i != j and max(abs(pos[i][0] - pos[j][0]), abs(pos[i][1] - pos[j][1])) <= 1]
+            hres["hamlet_distinct_pairs"] = len(need)
+            hres["hamlet_pairs_grid_adjacent"] = len(adj)
+            hres["hamlet_transitions_grid_adjacent"] = int(sum(Th[i, j] for i, j in adj))
         if zero:
             hres["n_zero_pairs"] = len(zero)
             hres["hamlet_transitions_missing"] = int(sum(f for _, f in zero))
@@ -283,6 +291,12 @@ def write_report(res: dict, out: Path, letters: list[str] | None, traj_file: Pat
         h = res["hamlet"]
         L += ["## Hamlet", "", f"Hamlet (Project Gutenberg #1524, lowercase a-z + space, whitespace collapsed): {h['len']:,} characters, "
               f"{h['n_transitions']:,} transitions. 27^len = 10^{h['log10_27_pow_len']:.0f}.", ""]
+        if "hamlet_pairs_grid_adjacent" in h:
+            L += [f"Geometry: a keystroke is logged only on entering a new key region, so consecutive keys must be neighbours on the "
+                  f"{res.get('rows', 3)}x{res.get('cols', 9)} grid (8-neighbourhood, corner crossings included). Of Hamlet's "
+                  f"{h['hamlet_distinct_pairs']} distinct letter pairs only {h['hamlet_pairs_grid_adjacent']} are grid-adjacent under this layout "
+                  f"({h['hamlet_transitions_grid_adjacent']:,} of {h['n_transitions']:,} transitions). Every other pair has probability zero for "
+                  f"any fly, however it moves: on a grid typewriter Hamlet is unreachable unless the layout makes all of its pairs adjacent.", ""]
         if h["zero_pairs"]:
             L += [f"Under the fitted first-order model P(Hamlet) = 0: {h['n_zero_pairs']} letter pairs needed by Hamlet were never typed "
                   f"({h['hamlet_transitions_missing']:,} of Hamlet's transitions). Missing pairs and their frequencies in Hamlet "

@@ -142,7 +142,30 @@ python -m flyhamlet.run_flies --n-flies 1 --live                      # matplotl
 scripts/run_experiment1.sh          # or: python analysis/entropy.py --out results/entropy_exp1
 ```
 
-RESULTS_EXP1
+Results (`results/entropy_exp1/report.md`; 4 flies x 300 s, seeds 42-45, 1,139 keystrokes,
+0.95 keystrokes/s, no wall contact):
+
+| bits per keystroke | fly typist | uniform grid walk (null) | uniform 27-key typist (null) |
+|---|---|---|---|
+| H0 marginal (Miller-Madow) | 4.70 | 4.73 | 4.75 |
+| H(X_t+1 \| X_t) | 1.65 | 1.67 | 4.75 |
+| LZ76 rate, length-matched | 1.89 | 2.45 | 4.16 |
+
+All 27 keys are visited, the transition graph is one strongly connected component and has no
+absorbing key. The marginal is nearly uniform but the conditional entropy is that of a random
+walk on the grid: because a keystroke is only logged when the fly *enters* a region, consecutive
+keys must be neighbours, and the LZ76 rate (1.89 bits) is below the grid walk's (2.45) because the
+fly walks in long straight lines and reverses, which is more predictable than a random walk.
+
+Hamlet (167,325 characters after cleaning) uses 468 distinct letter pairs; under this key layout
+only 105 of them are grid-adjacent, so P(Hamlet) = 0 for *any* fly on this typewriter, not just
+this one. The fitted model has 414 zero-probability pairs (150,475 of Hamlet's 167,324
+transitions), listed with their Hamlet frequencies in the report. With Laplace smoothing the
+expected number of keystrokes is ~10^313493, versus 27^len = 10^239503 for the uniform typist.
+
+![transition heatmap](results/entropy_exp1/transition_heatmap.png)
+![key visits](results/entropy_exp1/key_visit_heatmap.png)
+![trajectory](results/entropy_exp1/trajectory.png)
 
 ## Experiment 2: fly brain as entropy source
 

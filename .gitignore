@@ -7,3 +7,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
+results/**/*_trajectory.csv
+results/entropy_exp2/raw.*
+results/entropy_exp2/whitened*.bin
+results/entropy_exp2/keys.txt

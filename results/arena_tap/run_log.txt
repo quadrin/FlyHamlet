@@ -1,0 +1,4 @@
+EntropyTap: 500 neurons from a pool of 30649 (excluded 12333 wired neurons/partners) -> /home/user/FlyHamlet/results/entropy/isi_fly02.bin
+EntropyTap: 500 neurons from a pool of 30649 (excluded 12333 wired neurons/partners) -> /home/user/FlyHamlet/results/entropy/isi_fly03.bin
+EntropyTap: 500 neurons from a pool of 30649 (excluded 12333 wired neurons/partners) -> /home/user/FlyHamlet/results/entropy/isi_fly01.bin
+EntropyTap: 500 neurons from a pool of 30649 (excluded 12333 wired neurons/partners) -> /home/user/FlyHamlet/results/entropy/isi_fly00.bin

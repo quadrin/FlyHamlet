@@ -1,0 +1,5 @@
+fly  3 seed 45: 274 keystrokes (0.91/s), 2445210 spikes, wall contact 0.0%: 'kxciomhbjlptsbhvcxkunzwaqgyreaqf undoihvjbptsbhvcxkunzeaygqa'
+fly  2 seed 44: 295 keystrokes (0.98/s), 1690851 spikes, wall contact 0.0%: 'znukxcvhbstpbjvcikdnzwaygqawzndkihvjlpbsmoiku fqayawukihbsts'
+fly  1 seed 43: 269 keystrokes (0.90/s), 2302591 spikes, wall contact 0.0%: 'dkx uwzeaygqawzwu xkiomhbjlpbsmhicxkuwzeaygyaerygqfwundkihvj'
+fly  0 seed 42: 301 keystrokes (1.00/s), 1745667 spikes, wall contact 0.0%: 'icihmoicxcxcxcxcxkdnu f f fwzwaqayreaqf undkicihmoikx uwzeay'
+wrote /home/user/FlyHamlet/results/arena/fly*_keystrokes.csv for 4 flies; total keystrokes 1139
