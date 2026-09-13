@@ -33,7 +33,7 @@
           <div class="transport-controls">
             <button id="play" class="play-button" disabled><span id="play-icon" aria-hidden="true">▶</span><span id="play-label">Play</span></button>
             <button id="restart" class="session-button" aria-label="Start a new live session" title="Start a new live session with a fresh seed" disabled>New session</button>
-            <div class="speed-control"><label for="speed">Speed</label><select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option></select></div>
+            <div class="speed-control"><label for="speed">Speed</label><select id="speed" aria-label="Playback speed" autocomplete="off"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="20">20×</option></select></div>
             <button id="trail" class="trail-button" aria-pressed="false"><span class="toggle-track" aria-hidden="true"></span>Show trail</button>
           </div>
           <div class="timeline"><span id="compute-rate" class="compute-rate">Preparing live simulation</span><input id="scrub" type="range" hidden min="0" max="29999" value="0" step="1" aria-label="Scrub through the recording" disabled><span id="time" class="mono time">0.00 s simulated</span></div>
@@ -80,4 +80,4 @@
   <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> 139,255 neurons. A new session every time.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
 </div>
 <noscript><p class="no-script">Enable JavaScript to run the live simulator or watch saved recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
-<script src="site/replay.js?v=live-1" defer></script>
+<script src="site/replay.js?v=live-2" defer></script>

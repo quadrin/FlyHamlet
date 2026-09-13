@@ -690,5 +690,7 @@
   sprite.src = new URL('assets/fruit-fly.png', scriptURL).href;
   readColors();
   resize();
+  // Override any form value restored by the browser on a fresh page load.
+  els.speed.value = '1';
   loadFly(els.fly.value);
 })();
