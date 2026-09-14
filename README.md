@@ -970,6 +970,13 @@ nothing after the first error is recoverable because the wrong letter becomes
 the next cue. The plastic condition was not better than its reset control at
 recall in any seed.
 
+The browser's full seed 42 export matched the CLI exactly: 1,126 decisions with
+identical Kenyon-cell activity, group counts, learned weights and episodes. Pause
+left simulated time unchanged, a partial export while paused contained the
+completed decisions, and the page rendered at 400 px width without horizontal
+overflow or console errors. All 132 model, loader, rewiring and worker tests
+passed.
+
 What this does and does not show. Existing synapses of the simulated mushroom
 body can store letter-to-next-letter transitions under an imposed slower model,
 sparse projection-neuron codes and an external teacher, and a fixed MBON vote
