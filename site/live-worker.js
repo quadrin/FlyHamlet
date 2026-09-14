@@ -2,7 +2,7 @@
  * The immutable full connectome is loaded once; each new session gets fresh state.
  */
 'use strict';
-importScripts('live-model.js', 'flight-model.js?v=3');
+importScripts('live-model.js', 'flight-model.js?v=4');
 
 let connectome = null;
 let manifest = null;

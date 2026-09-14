@@ -20,6 +20,22 @@
   const scriptURL = document.currentScript?.src || new URL('site/flight-view.js', document.baseURI).href;
   const sprite = new Image();
   sprite.src = new URL('assets/fruit-fly.png', scriptURL).href;
+  const shadowSprite = new Image();
+  shadowSprite.src = new URL('assets/fly-shadow.png', scriptURL).href;
+  const wingSheet = new Image();
+  wingSheet.src = new URL('assets/fly-wings.png', scriptURL).href;
+  const ready = (image) => image.complete && image.naturalWidth > 0;
+
+  /* fly-wings.png is a 4 x 3 grid of wing pairs. The 12 cells are one wingbeat,
+   * read left to right along each row. Cell 0 is the top of the upstroke.
+   * Each cell holds both wings, head up, so a cell is clipped to one half to
+   * give the left and right wing their own stroke phase. */
+  const WING_SHEET_COLS = 4;
+  const WING_SHEET_ROWS = 3;
+  const WING_SHEET_FRAMES = WING_SHEET_COLS * WING_SHEET_ROWS;
+  const WING_SHEET_SPAN = 0.86;      // pair width, as a fraction of the body size
+  const WING_SHEET_ANCHOR_Y = -0.05; // hinge height on the thorax, fraction of size
+  const SHADOW_SPRITE_GAIN = 1.7;    // the sprite is softer than the old gradient
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
   let renderSample = null;
   let lastFrameAt = 0;
@@ -70,7 +86,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '3');
+          versioned.searchParams.set('v', '4');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -166,9 +182,15 @@
     const radius = size * (0.28 + 0.18 * altitudeFraction);
     ctx.save(); ctx.translate(x + size * 0.09 * altitudeFraction, y + size * 0.12 * altitudeFraction);
     ctx.rotate(Math.PI / 2 - heading); ctx.scale(1.35 + altitudeFraction * 0.45, 0.58 + altitudeFraction * 0.12);
-    const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-    shadow.addColorStop(0, `rgba(35,25,12,${alpha})`); shadow.addColorStop(0.48, `rgba(35,25,12,${alpha * 0.55})`); shadow.addColorStop(1, 'rgba(35,25,12,0)');
-    ctx.fillStyle = shadow; ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.restore();
+    if (ready(shadowSprite)) {
+      ctx.globalAlpha = Math.min(1, alpha * SHADOW_SPRITE_GAIN);
+      ctx.drawImage(shadowSprite, -radius, -radius, radius * 2, radius * 2);
+    } else {
+      const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+      shadow.addColorStop(0, `rgba(35,25,12,${alpha})`); shadow.addColorStop(0.48, `rgba(35,25,12,${alpha * 0.55})`); shadow.addColorStop(1, 'rgba(35,25,12,0)');
+      ctx.fillStyle = shadow; ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
   }
 
   function drawWing(side, size, phase, amplitude, alpha) {
@@ -207,6 +229,28 @@
     ctx.restore();
   }
 
+  function drawWingSprite(side, size, phase, amplitude, alpha) {
+    if (amplitude <= 0.01) return;
+    const cellW = wingSheet.naturalWidth / WING_SHEET_COLS;
+    const cellH = wingSheet.naturalHeight / WING_SHEET_ROWS;
+    const frame = Math.min(WING_SHEET_FRAMES - 1,
+      Math.floor(modulo(phase, TAU) / TAU * WING_SHEET_FRAMES));
+    const sx = (frame % WING_SHEET_COLS) * cellW;
+    const sy = Math.floor(frame / WING_SHEET_COLS) * cellH;
+
+    const drawW = size * WING_SHEET_SPAN * (0.92 + 0.08 * amplitude);
+    const drawH = drawW * cellH / cellW;
+    const top = WING_SHEET_ANCHOR_Y * size - drawH / 2;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.rect(side < 0 ? -drawW : 0, top - drawH, drawW, drawH * 3);
+    ctx.clip();
+    ctx.drawImage(wingSheet, sx, sy, cellW, cellH, -drawW / 2, top, drawW, drawH);
+    ctx.restore();
+  }
+
   function drawWings(sample, size) {
     const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
     if (!airborne) return;
@@ -215,10 +259,11 @@
     const frequency = sample.wing_frequency_hz || 0;
     const leftAmp = sample.wing_left_amplitude ?? sample.wing_power ?? 0;
     const rightAmp = sample.wing_right_amplitude ?? sample.wing_power ?? 0;
+    const paint = ready(wingSheet) ? drawWingSprite : drawWing;
 
     if (reducedMotion.matches || frequency <= 0) {
-      drawWing(-1, size, phase, leftAmp, 0.42);
-      drawWing(1, size, phase, rightAmp, 0.42);
+      paint(-1, size, phase, leftAmp, 0.42);
+      paint(1, size, phase, rightAmp, 0.42);
       return;
     }
 
@@ -227,8 +272,8 @@
     for (let i = ghosts - 1; i >= 0; --i) {
       const p = phase - TAU * frequency * exposure * i / (ghosts - 1);
       const a = i === 0 ? 0.34 : 0.05 + 0.07 * (1 - i / ghosts);
-      drawWing(-1, size, p, leftAmp, a);
-      drawWing(1, size, p, rightAmp, a);
+      paint(-1, size, p, leftAmp, a);
+      paint(1, size, p, rightAmp, a);
     }
   }
 
