@@ -94,22 +94,25 @@ test('walking advances an alternating gait oscillator and ground traction moves 
   assert(sample.gait_duty_factor > 0.5 && sample.gait_duty_factor < 0.7);
 });
 
-test('a flight bout ends once the giant fibre goes quiet', () => {
+test('a flight bout ends even while every descending drive is held high', () => {
   const arena = new FlyArena(graph(), manifest(), 1);
   for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
   for (let i = 0; i < 40; i++) arena.stepControl();
   assert.equal(arena.fly.airborne, true, 'the giant fibre should launch the fly');
 
-  // Hold the locomotor drive high but let the giant fibre fall silent. Walking
-  // commands alone must not keep the fly airborne.
+  // Hold BOTH the locomotor drive and the giant fibre at full rate. Neither may
+  // hold the fly up: near a wall the looming response keeps the giant fibre
+  // firing, so if it could sustain a bout the fly would never come down.
   let steps = 0;
   while (arena.fly.airborne && steps < 20000) {
     arena.stepControl();
-    for (let i = 0; i < 500; i++) { arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); }
+    for (let i = 0; i < 500; i++) {
+      arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); arena.groups.GF.push(1);
+    }
     steps++;
   }
-  assert.equal(arena.fly.airborne, false, 'the bout must end without the giant fibre');
-  assert(steps * 0.001 < 12, `bout ran ${(steps * 0.001).toFixed(2)}s after the giant fibre stopped`);
+  assert.equal(arena.fly.airborne, false, 'the bout must end even under sustained drive');
+  assert(steps * 0.001 < 6, `bout ran ${(steps * 0.001).toFixed(2)}s under sustained drive`);
 });
 
 test('steering in flight fires saccades rather than a steady turn', () => {

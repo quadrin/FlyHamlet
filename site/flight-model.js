@@ -24,9 +24,12 @@
     wing_stroke_amplitude_deg: 72,
     wing_rise_s: 0.020,
     wing_decay_s: 0.45,
-    // A flight bout must end. Walking commands alone must not hold the fly up,
-    // or a takeoff becomes a cruise it never leaves. The locomotor share of the
-    // wing drive fades over the bout; only the giant fibre renews it.
+    /* A flight bout must end. The whole wing drive fades over the bout, the
+     * giant fibre included: it is an escape trigger, not a throttle. Fading
+     * only the locomotor share left the bouts at 9 s and the fly airborne 93%
+     * of the time, because the fly at the ceiling sits near a wall, looming
+     * fires, and max(gfDrive, ...) walked straight past the decay. A new bout
+     * still needs a fresh trigger, which gf_reset_hz already gates. */
     flight_locomotor_gain: 0.78,
     flight_sustain_s: 0.8,
     wing_turn_asymmetry: 0.22,
@@ -113,7 +116,7 @@
       const locomotorDrive = clamp((fwd + bwd) / c.motor_full_scale_hz, 0, 1);
       const sustain = Math.exp(-f.airborneTime / Math.max(1e-3, c.flight_sustain_s));
       const targetDrive = f.airborne
-        ? clamp(Math.max(gfDrive, c.flight_locomotor_gain * locomotorDrive * sustain), 0, 1)
+        ? clamp(sustain * Math.max(gfDrive, c.flight_locomotor_gain * locomotorDrive), 0, 1)
         : 0;
 
       const tau = targetDrive > f.wingDrive ? c.wing_rise_s : c.wing_decay_s;

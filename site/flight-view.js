@@ -106,7 +106,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '11');
+          versioned.searchParams.set('v', '12');
           workerURL = versioned;
         }
         super(workerURL, options);
