@@ -47,6 +47,9 @@ post-cue neural information without external history ([Experiment 5](#experiment
 The **[Sequence lab](https://quadrin.github.io/FlyHamlet/sequence.html)** asks whether the
 order of two letters can be read from one snapshot of neural state after the input
 has stopped ([Experiment 6](#experiment-6-two-letter-state-decoding)).
+The **[Chain lab](https://quadrin.github.io/FlyHamlet/chain.html)** gives the network one
+prompt and feeds its own decoded letters back as cues, with nothing stored outside
+its state ([Experiment 7](#experiment-7-self-driven-recall)).
 
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
@@ -552,7 +555,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_memory.cjs --seeds 42,43,44 --out results/memory_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. With the
@@ -581,7 +584,7 @@ cue-visible separation, frozen fits, and unchanged connectivity arrays.
 
 Implementation: `site/memory-model.js` contains the assay; `site/memory-rewire.js`
 prepares and audits the control; `site/memory-worker.js` schedules computation;
-`site/memory.js` renders the observer interface. Build all five pages with
+`site/memory.js` renders the observer interface. Build all six pages with
 `python scripts/build_site.py`.
 
 The design is motivated by [connectome reservoir memory tests and rewired controls](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/).
@@ -684,7 +687,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_sequence.cjs --seeds 42,43,44 --out results/sequence_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. Under the
@@ -732,12 +735,138 @@ snapshots, frozen fits, and unchanged connectivity arrays.
 
 Implementation: `site/sequence-model.js` contains the assay and the slow-graph
 preparation; `site/sequence-worker.js` schedules computation; `site/sequence.js`
-renders the observer interface. Build all five pages with `python scripts/build_site.py`.
+renders the observer interface. Build all six pages with `python scripts/build_site.py`.
 
 The design is motivated by the same [connectome reservoir framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/)
 as Experiment 5. Neither that work nor the underlying
 [sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
 validates the slower-dynamics parameters or this state readout.
+
+## Experiment 7: self-driven recall
+
+Open **[Chain lab](https://quadrin.github.io/FlyHamlet/chain.html)** and select
+**Run experiment**. The assay gives the network one START prompt and then lets it
+drive itself: after each cue, one snapshot of its current state is decoded into a
+letter, and that letter is presented back as the next sensory cue. Nothing is
+stored outside the network between decisions. Every session computes the full
+network. The default speed is 1×; the protocol simulates at most **136.1 seconds**
+and less when episodes end early, with device-dependent wall time. Pause/resume,
+new seeds, and full or partial exports work as in the other labs.
+
+This is the test the earlier labs pointed to. Experiment 4 recites the phrase
+with six stored response vectors as external memory. Experiment 6 showed that the
+original model forgets the first of two letters within about 125 ms, while an
+imposed slower model keeps both for at least 200 ms. The question here is whether
+that retained state can carry the network's **position in a phrase** across many
+letters, with the network never reset within an episode.
+
+| Condition | Model during an episode | Between cues | Decoder training |
+| --- | --- | --- | --- |
+| Original dynamics | Unchanged graph and time constants | State retained; never reset | Fit then freeze |
+| Slower dynamics | Time constants ×10, signed weights ×0.1 | State retained; never reset | Same fitting budget |
+| Reset control | Slower model; identical cues | All state replaced with rest at every cue onset | Same fitting budget |
+
+**Timing.** Each cue drives its sensory partition at **100 Hz for 100 ms**, using the
+fixed eight-code codebook of the phrase lab (START plus seven characters). A
+**25 ms gap** with no input follows; the snapshot is read at the end of the gap and
+the next cue starts on the following step, so one decision takes **125 ms**. All
+eight inputs are registered on every network so unstimulated eye cells are treated
+identically, and all 314 annotated eye cells are excluded from the measurements.
+Every episode starts from rest with its own noise seed; episode seeds are shared
+across conditions, and the reset control draws a further seed for every cue.
+Background drive is disabled.
+
+**Snapshots and readouts.** The measurement is the Sequence lab's: each
+nonstimulated neuron's membrane voltage relative to rest and synaptic current,
+rounded to the nearest **0.01 mV**, averaged in 128 fixed pools (256 measurements).
+Six teacher-forced training episodes present START followed by the phrase and
+label each snapshot with the next character or END (**114 examples**). One scaler
+with training-only statistics and one eight-way ridge readout (penalty 0.01, 2,056
+coefficients) are fitted per condition and frozen. No earlier snapshot, cue label,
+clock, step index or previous output is a feature.
+
+**Evaluation.** Three further teacher-forced episodes with fresh noise measure
+**next-letter accuracy** without compounding errors; chance is 1/8. Six
+**autonomous recall episodes** then start from START alone. The readout's letter
+becomes the next cue, END stops the episode, and a fixed cap of 32 decisions is
+independent of the phrase length. **Chain length** is the longest correct prefix of
+the output, out of 18. Exports also include exact matches and edit distances. The
+reference phrase is used only for training labels and post-hoc scoring; the
+autonomous actor never sees it.
+
+**No-memory comparator.** A decoder fitted on the one-hot current cue alone and
+rolled out on its own feedback produces `to be be be…` and reaches chain length
+**6**. That is the best any decoder can do without memory of earlier letters,
+because after `e` the phrase continues with a space, and after a space it
+continues with `b`. A chain that stops near 6 has not used any memory.
+
+**Slower dynamics and reset.** The hypothesis and control conditions are the
+Sequence lab's: time constants **200 ms and 50 ms**, weights ×0.1, delay,
+refractory period and thresholds unchanged, rescaled weight array SHA-256
+`d73770bbd383381b5de0ff8faf915972eb48f16f738c04de755c40dfff18f9b4`. The reset
+control replaces all neural state at every cue onset, so each of its snapshots
+reflects only the current letter and it can do no better than the comparator
+except by chance.
+
+Reproduce the development runs and checks with:
+
+```bash
+node scripts/benchmark_chain.cjs --seeds 42,43,44 --out results/chain_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
+```
+
+Development runs used unchanged defaults with seeds **42, 43 and 44**. Under the
+**slower-dynamics hypothesis**, the network chained the phrase from its own state.
+Teacher-forced next-letter accuracy was **96.5%, 93.0% and 82.5%** against a chance
+level of 12.5%. Autonomous chain lengths were **5, 5, 5, 18, 10, 18**; **10, 5, 18,
+18, 14, 18**; and **12, 12, 5, 18, 13, 5** (means **10.2, 13.8 and 10.8** of 18).
+Six of the eighteen episodes typed the whole phrase; three of those stopped with
+END at the right place and are exact, and the others continued past it (one
+looped into `to be or not to be or not to be` until the cap). The typical
+failures are stopping with END after `to be`, and losing the thread inside `not`.
+Every slow-model chain that failed still exceeded, or tied, the no-memory
+comparator's 6 in 13 of 18 episodes.
+
+Under the **original dynamics**, next-letter accuracy was **24.6%, 29.8% and
+26.3%** and autonomous chains never exceeded 2 (means **0.8, 1.0 and 0.5**). The
+**reset control** had higher teacher-forced accuracy (**40.4%, 50.9% and 50.9%**,
+which is what the current letter alone allows) but chains of at most 3 (means
+**1.8, 0.3 and 0.5**). Both are below the no-memory comparator, because an
+eight-way readout from a noisy 256-feature snapshot is a worse next-letter table
+than a one-hot lookup. The difference between the slower model and its own reset
+control is the effect of state carried across cues.
+
+The browser's full seed 42 export matched the CLI exactly: 845 decisions with
+identical measurements, scalers, weights, predictions and episodes. Pause left
+simulated time unchanged, a partial export while paused contained the completed
+decisions, and the page rendered at 400 px width without horizontal overflow or
+console errors. All 117 model, loader, rewiring and worker tests passed.
+
+What this does and does not show. The imposed slower model, plus a supervised
+external readout, can carry its position in one 18-character phrase for a few
+seconds and reproduce it end to end on its own. The connectome did not learn:
+every synapse is fixed, the readout is fitted outside the brain, and the network
+was cued with each letter for six training episodes. The original model, with the
+measured time constants, cannot do this at all. Typing Hamlet would need the
+network to hold position in a sequence of about 180,000 characters and to store
+the transitions somewhere; nothing here provides either.
+
+The [benchmark report](results/chain_benchmark/report.md) links complete raw runs
+as gzip-compressed JSON and lists every autonomous output. Browser **Export run**
+produces ordinary JSON, including partial completed decisions. The CLI
+independently rebuilds every scaler, feature and choice, confirms that every recall
+cue was the actor's own previous prediction and never the reference, recomputes
+chain lengths and edit distances, and verifies paired cues, frozen fits and
+unchanged connectivity arrays.
+
+Implementation: `site/chain-model.js` contains the assay; `site/chain-worker.js`
+schedules computation; `site/chain.js` renders the observer interface. Build all
+six pages with `python scripts/build_site.py`.
+
+The design is motivated by the same [connectome reservoir framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/)
+as Experiments 5 and 6. Neither that work nor the underlying
+[sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
+validates the slower-dynamics parameters, this state readout, or self-driven recall.
 
 ## Notes and caveats
 
