@@ -10,6 +10,8 @@ Transparent PNG, square, head up. The replay and the live view both use it.
 Give the fly tucked wings: the live view animates the wings from
 `fly-wings.png` and draws them behind the body.
 
+The legs come from this image. The live view does not draw legs.
+
 Art direction: amber striped abdomen, red compound eyes, six fine legs,
 head pointing upward, isolated background.
 

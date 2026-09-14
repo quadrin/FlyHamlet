@@ -86,7 +86,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '4');
+          versioned.searchParams.set('v', '5');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -277,64 +277,6 @@
     }
   }
 
-  const LEG_LAYOUT = [
-    {side:-1, hipX:0.05, hipY:-0.12, footX:0.23, footY:-0.10, phase:0},
-    {side:-1, hipX:0.06, hipY: 0.00, footX:0.24, footY: 0.02, phase:Math.PI},
-    {side:-1, hipX:0.05, hipY: 0.13, footX:0.21, footY: 0.14, phase:0},
-    {side: 1, hipX:0.05, hipY:-0.12, footX:0.23, footY:-0.10, phase:Math.PI},
-    {side: 1, hipX:0.06, hipY: 0.00, footX:0.24, footY: 0.02, phase:0},
-    {side: 1, hipX:0.05, hipY: 0.13, footX:0.21, footY: 0.14, phase:Math.PI},
-  ];
-
-  function drawLegs(sample, size) {
-    const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
-    const gaitPhase = sample.gait_phase_rad || 0;
-    const duty = Math.max(0.5, Math.min(0.78, sample.gait_duty_factor || 0.62));
-
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    for (const leg of LEG_LAYOUT) {
-      const phase = modulo(gaitPhase + leg.phase, TAU);
-      const cycle = phase / TAU;
-      const stance = !airborne && cycle < duty;
-
-      const hipX = leg.side * size * leg.hipX;
-      const hipY = size * leg.hipY;
-
-      let footX = leg.side * size * leg.footX;
-      let footY = size * leg.footY;
-      let lift = 0;
-
-      if (airborne) {
-        footX = leg.side * size * 0.15;
-        footY = hipY + size * 0.03;
-        lift = size * 0.02;
-      } else if (stance) {
-        const t = cycle / duty;
-        footX += leg.side * size * (0.025 - 0.05 * t);
-        footY += size * (0.004 - 0.008 * t);
-      } else {
-        const t = (cycle - duty) / (1 - duty);
-        footX += leg.side * size * (-0.025 + 0.05 * t);
-        footY += size * (0.006 - 0.012 * t);
-        lift = Math.sin(Math.PI * t) * size * 0.028;
-      }
-
-      const kneeX = hipX + (footX - hipX) * 0.52;
-      const kneeY = hipY + (footY - hipY) * 0.45 - size * 0.03 - lift;
-
-      ctx.strokeStyle = stance ? 'rgba(62,48,35,0.88)' : 'rgba(82,63,43,0.68)';
-      ctx.lineWidth = Math.max(0.85, size * 0.010);
-
-      ctx.beginPath();
-      ctx.moveTo(hipX, hipY);
-      ctx.lineTo(kneeX, kneeY);
-      ctx.lineTo(footX, footY);
-      ctx.stroke();
-    }
-  }
-
   function drawFallback(size) {
     ctx.fillStyle = '#795633'; ctx.beginPath(); ctx.ellipse(0, size * 0.06, size * 0.085, size * 0.23, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#853e26'; for (const side of [-1,1]) { ctx.beginPath(); ctx.ellipse(side * size * .057, -size * .17, size * .053, size * .069, side * .2, 0, TAU); ctx.fill(); }
@@ -355,7 +297,7 @@
 
     ctx.save(); ctx.translate(bodyX, bodyY); ctx.rotate(Math.PI / 2 - heading);
     ctx.scale(Math.max(0.56, Math.cos(roll)) * scale, Math.max(0.62, Math.cos(pitch)) * scale);
-    drawWings(sample, size); drawLegs(sample, size);
+    drawWings(sample, size);
     if (sprite.complete && sprite.naturalWidth > 0) {
       const sh = size * sprite.naturalHeight / sprite.naturalWidth;
       ctx.drawImage(sprite, -size / 2, -sh / 2, size, sh);
