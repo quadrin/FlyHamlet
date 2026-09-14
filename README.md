@@ -44,6 +44,9 @@ The **[Phrase recall lab](https://quadrin.github.io/FlyHamlet/recall.html)** add
 separate sequence-memory benchmark, described in [Experiment 4](#experiment-4-phrase-recall).
 The **[Memory lab](https://quadrin.github.io/FlyHamlet/memory.html)** measures
 post-cue neural information without external history ([Experiment 5](#experiment-5-neural-memory)).
+The **[Sequence lab](https://quadrin.github.io/FlyHamlet/sequence.html)** asks whether the
+order of two letters can be read from one snapshot of neural state after the input
+has stopped ([Experiment 6](#experiment-6-two-letter-state-decoding)).
 
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
@@ -77,7 +80,7 @@ analysis/entropy.py      Experiment 1: entropies, null models, Hamlet scoring, r
 analysis/whiten.py       Experiment 2: 64 ISIs -> SHA-256 -> rejection-sampled keys
 analysis/typist.py       Experiment 2: longest Hamlet substring via a suffix automaton
 analysis/entropy_tests.py Experiment 2: NIST SP 800-90B MCV + collision estimates, dieharder output
-scripts/                 download_data.py, benchmark.py, benchmark_brian2.py, run_experiment{1,2}.sh
+scripts/                 download_data.py, benchmark.py, benchmark_brian2.py, run_experiment{1,2}.sh, benchmark_{learning,recall,memory,sequence}.cjs, build_site.py
 tests/                   unit tests (simulator vs Brian2, estimators, whitening, typist, tap)
 docs/                    phase notes (DN screen)
 results/                 validation, benchmark, arena logs, experiment reports
@@ -549,7 +552,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_memory.cjs --seeds 42,43,44 --out results/memory_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. With the
@@ -578,13 +581,159 @@ cue-visible separation, frozen fits, and unchanged connectivity arrays.
 
 Implementation: `site/memory-model.js` contains the assay; `site/memory-rewire.js`
 prepares and audits the control; `site/memory-worker.js` schedules computation;
-`site/memory.js` renders the observer interface. Build all four pages with
+`site/memory.js` renders the observer interface. Build all five pages with
 `python scripts/build_site.py`.
 
 The design is motivated by [connectome reservoir memory tests and rewired controls](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/).
 The underlying [sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
 was validated for different tasks and explicitly notes limitations in precise
 dynamics and neuromodulation. Neither paper validates this new memory assay.
+
+## Experiment 6: two-letter state decoding
+
+Open **[Sequence lab](https://quadrin.github.io/FlyHamlet/sequence.html)** and select
+**Run experiment**. The assay presents two letters in order, removes all input, and
+asks whether two frozen classifiers can recover the first and the second letter from
+one snapshot of the network's current state. Every session computes the full network.
+The default speed is 1×; the protocol simulates **163.2 seconds**, with
+device-dependent wall time. Pause/resume, new seeds, and full or partial exports
+work as in the other labs.
+
+This follows from Experiment 5, where post-cue spiking died out within about 50 ms
+and spike-count decoders were at chance by 100 ms. Three things change here. The
+task is harder: a pair of letters must come back **in order**, so remembering only
+the most recent cue is visible as a distinct failure. The measurement is more
+permissive: instead of new spikes, each decoder reads the current **membrane voltage
+and synaptic current** of nonstimulated neurons, which is not something a downstream
+neuron can do with spikes alone. And the experiment adds an **explicit hypothesis**:
+a version of the same connectome with slower dynamics, compared against a reset
+control of that same version.
+
+| Condition | Model during the cues | At input off | Decoder training |
+| --- | --- | --- | --- |
+| Original dynamics | Unchanged graph and time constants | Input off; dynamic state retained | Fit then freeze |
+| Slower dynamics | Time constants ×10, signed weights ×0.1 | Input off; dynamic state retained | Same fitting budget |
+| Reset control | Slower model; identical inputs | Replace all dynamic state with rest | Same fitting budget |
+
+Each condition has **64 training and 64 held-out trials**: sixteen per ordered pair
+for `tt`, `to`, `ot` and `oo`, shuffled separately in the two phases. All conditions
+use exactly the same pair order and noise seeds. Training and held-out trials use
+distinct seeds. Every trial begins at rest, and nothing resets between its two
+letters; only the reset control resets again at input off.
+
+**Timing.** The first letter drives its sensory partition at **100 Hz for 100 ms**,
+using the same fixed codebook as the phrase and memory labs. A **25 ms gap** with no
+input follows, then the second letter drives its own partition for **100 ms**. All
+input is disabled before the first simulation step after **225 ms**. Both letter
+inputs are registered in every trial, so unstimulated eye cells are treated
+identically whichever pair is shown. All 314 annotated eye cells are excluded from
+the measurements. Background drive is disabled.
+
+**Snapshots.** One snapshot is read at the final cue step (225 ms, input still on)
+and three more **25, 100 and 200 ms after input off** (250, 325 and 425 ms). The
+first is a diagnostic of encoding; it precedes any reset, so the slower and reset
+conditions share it exactly, and it is never combined with the post-cue snapshots.
+Each snapshot reads every nonstimulated neuron's membrane voltage relative to rest
+and its synaptic current, rounds each to the nearest **0.01 mV**, and reports the
+mean of those rounded values in the same 128 fixed pools as the earlier labs
+(**256 measurements**). The rounding is a declared measurement resolution. Without
+it, the float32 model can freeze deviations of a few microvolts that never return
+to rest, and a standardized decoder can read those numerical remnants as if they
+were memory. Later snapshots come from the same trials as earlier ones and are
+correlated observations.
+
+**Readouts.** For each condition and snapshot, one scaler with training-only means
+and standard deviations standardizes the 256 measurements; exactly constant
+training features are zeroed rather than amplified. Two ridge classifiers, one for
+each position, are then fitted on the same 64 standardized examples with penalty
+0.01 including the bias (514 coefficients each). There are **24 readouts** in total.
+Scalers and weights are frozen before held-out trials; no earlier snapshot, cue
+label, clock, trial index or previous output is a feature. No synapse changes.
+
+**Slower dynamics.** The hypothesis condition multiplies the membrane and synaptic
+time constants by 10 (**200 ms and 50 ms**) and every signed synaptic weight by 0.1.
+With that pairing the time integral of each synaptic event's voltage response is
+unchanged while its peak amplitude falls tenfold. Conduction delay, refractory
+period, thresholds and the sensory input weight are not scaled. The rescaled weight
+array has SHA-256
+`d73770bbd383381b5de0ff8faf915972eb48f16f738c04de755c40dfff18f9b4`; the graph
+topology and the original arrays are untouched. These parameters are imposed by the
+experimenter and were not identified from fruit-fly memory data. A linear leaky
+integrator with a 200 ms time constant is expected to hold a subthreshold trace for
+hundreds of milliseconds, so success under this condition says what the imposed
+model can do, not what a fly does.
+
+**Reset control.** The third condition runs the slower model with identical cues,
+then replaces all voltages, currents, refractory timers, queued synaptic events and
+the neural RNG with a resting network at input off. Its post-cue snapshots are
+exactly rest, so any score above chance there would indicate a leak in the pipeline
+rather than memory.
+
+**Results and interpretation.** The page plots exact-pair accuracy against time
+after input off and tabulates first-letter and second-letter accuracy, the mean
+number of nonstimulated neurons whose quantized voltage is off rest, and fully
+silent snapshots. Exact-pair chance is **25%**; a decoder that retains only the
+final letter and guesses the first scores **50%** on the pair and **50%** on the
+first letter. Exports include per-pair scores, confusion matrices and pointwise 95%
+Wilson intervals, which describe simulated trial accuracy, not variation across
+animals. A decodable subthreshold trace is not a demonstration of biologically
+accessible memory, of plasticity, or of a benefit of the anatomical wiring, and
+nothing here shows autonomous typing or memory for a text.
+
+Reproduce the development runs and checks with:
+
+```bash
+node scripts/benchmark_sequence.cjs --seeds 42,43,44 --out results/sequence_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs
+```
+
+Development runs used unchanged defaults with seeds **42, 43 and 44**. Under the
+**original dynamics**, the second letter was still decodable after input off:
+**100%, 100% and 98.4%** at 25 ms, **96.9%, 98.4% and 95.3%** at 100 ms, and
+**82.8%, 85.9% and 79.7%** at 200 ms. The first letter was never recoverable. It
+was at chance already at the final cue step (**45.3%, 51.6% and 53.1%**, with the
+second letter at 100%), at or below chance at 25 ms (**34.4%, 42.2% and 43.8%**),
+and at chance at 100 and 200 ms (**53.1–59.4%** and **40.6–48.4%**). Exact-pair
+accuracy peaked at **50.0–57.8%** at 100 ms, which is what last-letter-only recall
+predicts. By 200 ms only **3–5** nonstimulated neurons were off rest on average, by
+at most 0.02 mV, and 8–10 of 64 snapshots were fully silent; the residual
+second-letter signal lives in a handful of late-relaxing cells, not in a
+distributed trace.
+
+Under the **slower-dynamics hypothesis**, both letters were recovered from every
+snapshot: exact-pair accuracy was **100%, 98.4% and 100%** at 200 ms, with about
+6,000 neurons still off rest. This is the expected behavior of an integrator with a
+200 ms time constant and does not describe fruit-fly physiology; it shows that the
+readout, not the anatomy, is what limits the original model. The **reset control**
+was silent at every post-cue snapshot and scored exactly **25%** on the pair and
+**50%** on each letter, so no cue information reached the decoders by any route
+other than retained neural state. The imposed model still needs its own readout to
+type anything; a spontaneous, self-driven reproduction of a sequence remains the
+next separate test.
+
+The browser's full seed 42 export matched the CLI exactly: 384 trials and 768
+held-out snapshots with identical measurements, scalers, weights and predictions.
+Pause left simulated time unchanged, a partial export while paused contained the
+completed trials, and the page rendered at 400 px width without horizontal
+overflow or console errors. All 101 model, loader, rewiring and worker tests passed.
+
+The [benchmark report](results/sequence_benchmark/report.md) links complete raw runs
+as gzip-compressed JSON. Browser **Export run** produces ordinary JSON, including
+partial completed observations. Both include codebook and noise seeds, input timing,
+raw quantized pool measurements, standardized features, scalers, frozen weights,
+predictions, both neural parameter sets, original graph provenance/hashes, and the
+rescaled weight hash. The CLI independently rebuilds every scaler, feature and
+choice, verifies paired inputs, timing, the shared final-cue snapshot, resting reset
+snapshots, frozen fits, and unchanged connectivity arrays.
+
+Implementation: `site/sequence-model.js` contains the assay and the slow-graph
+preparation; `site/sequence-worker.js` schedules computation; `site/sequence.js`
+renders the observer interface. Build all five pages with `python scripts/build_site.py`.
+
+The design is motivated by the same [connectome reservoir framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/)
+as Experiment 5. Neither that work nor the underlying
+[sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
+validates the slower-dynamics parameters or this state readout.
 
 ## Notes and caveats
 
