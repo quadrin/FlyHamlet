@@ -17,9 +17,9 @@
   const {summarizeChainEpisode} = chain;
   const CONDITIONS = Object.freeze(['plastic', 'plasticReset', 'frozen']);
   const PHASES = Object.freeze(['train', 'diagnostic', 'recall']);
-  const DEFAULTS = Object.freeze({phrase: 'to be or not to be', trainEpisodes: 8, diagnosticEpisodes: 3, recallEpisodes: 6,
-    maxDecisions: 32, cueMs: 100, gapMs: 25, cueRateHz: 100, slowTimeFactor: 10, slowWeightScale: 0.3,
-    learningRateMvPerSpike: 0.05, maxWeightMv: 4, stateResolutionMv: 0.01, ridge: 0.01, codebookSeed: 7919, groupSeed: 104729});
+  const DEFAULTS = Object.freeze({phrase: 'to be or not to be', trainEpisodes: 12, diagnosticEpisodes: 3, recallEpisodes: 6,
+    maxDecisions: 32, cueMs: 100, gapMs: 25, warmupMs: 250, cueRateHz: 100, slowTimeFactor: 10, slowWeightScale: 0.3,
+    learningRateMvPerSpike: 1, maxWeightMv: 20, stateResolutionMv: 0.01, ridge: 0.01, codebookSeed: 7919, groupSeed: 104729});
   const clone = value => JSON.parse(JSON.stringify(value));
   const SEED_DOMAINS = Object.freeze({train: 107, diagnostic: 109, recall: 113});
 
@@ -90,7 +90,7 @@
       if (!Number.isInteger(p.diagnosticEpisodes) || p.diagnosticEpisodes < 0) throw new Error('Invalid diagnosticEpisodes.');
       for (const key of ['cueMs', 'cueRateHz', 'slowTimeFactor', 'slowWeightScale', 'learningRateMvPerSpike', 'maxWeightMv', 'stateResolutionMv', 'ridge'])
         if (!(p[key] > 0) || !Number.isFinite(p[key])) throw new Error(`Invalid ${key}.`);
-      if (!(p.gapMs >= 0) || !Number.isFinite(p.gapMs)) throw new Error('Invalid gapMs.');
+      for (const key of ['gapMs', 'warmupMs']) if (!(p[key] >= 0) || !Number.isFinite(p[key])) throw new Error(`Invalid ${key}.`);
       this.dtMs = Number(manifest.config.sim.dt_ms);
       if (!(this.dtMs > 0) || !Number.isFinite(this.dtMs) || p.cueRateHz * this.dtMs / 1000 > 1) throw new Error('Invalid neural timestep or cue probability.');
       const background = manifest.config.sim.background;
@@ -100,8 +100,9 @@
         if (Math.abs(steps * this.dtMs - value) > 1e-9) throw new Error('Cue and gap timings must be exact neural timestep multiples.');
         return steps;
       };
-      this.cueSteps = integerSteps(p.cueMs); this.gapSteps = integerSteps(p.gapMs);
+      this.cueSteps = integerSteps(p.cueMs); this.gapSteps = integerSteps(p.gapMs); this.warmupSteps = integerSteps(p.warmupMs);
       this.stepsPerDecision = this.cueSteps + this.gapSteps; this.decisionMs = this.stepsPerDecision * this.dtMs;
+      this.warmupThisDecision = 0;
       validateAnnotation(annotation, graph.n);
       this.annotation = {kenyonCells: [...annotation.kenyonCells], mbons: [...annotation.mbons], uniglomerularPNs: [...annotation.uniglomerularPNs]};
       this.slowConfig = Object.freeze(slowNeuralConfig(manifest.config.sim, p.slowTimeFactor));
@@ -161,6 +162,7 @@
         readoutDefinition: 'Fixed seeded partition of all annotated MBONs into eight groups, one per output code. The decision is the group with the most MBON spikes in the cue-plus-gap window; ties fall to the group with the highest mean quantized MBON voltage deviation, then the lowest group index. No parameter of the readout is learned.',
         learningRule: 'After each training decision, if the target group is not the strict spike-count winner: for every Kenyon cell that spiked in the window, its synapses onto target-group MBONs gain learningRateMvPerSpike per spike (capped at maxWeightMv) and its synapses onto the best non-target group lose the same amount (floored at zero). Only existing Kenyon-cell-to-MBON synapses change; the teacher is external.',
         continuity: 'plastic and frozen keep one network per episode; plasticReset replaces all neural state at every cue onset. Learned synaptic weights persist across episodes within a condition and are frozen after training.',
+        warmup: 'A resting network barely answers its first cue, so the first cue of every episode is presented for warmupMs before its decision window. In plasticReset every cue gets the same warm-up with the current letter only, so its activity is comparable but carries no history. Spikes are counted only in the final cueMs plus gapMs of each decision.',
         slowModel: {timeFactor: p.slowTimeFactor, weightScale: p.slowWeightScale, tauMemMs: this.slowConfig.tau_mem_ms, tauSynMs: this.slowConfig.tau_syn_ms,
           calibration: 'Weight scale chosen so that projection-neuron cues activate a sparse Kenyon-cell population (about 3 to 9 percent) with letter-selective, position-dependent codes; the original weights saturate two thirds of all Kenyon cells for every letter.',
           status: 'Imposed engineering hypothesis; not identified from fruit-fly memory data.'},
@@ -176,7 +178,8 @@
       return {condition: this.condition, phase: this.done ? 'complete' : this.phase, conditionIndex: Math.min(this.conditionIndex + 1, CONDITIONS.length),
         conditionTotal: CONDITIONS.length, episode: this.episode, episodeTotal: this.done ? 0 : this.episodeTotal, step: this.decisionStep,
         cue: this.done ? null : this.cue, inputActive: !this.done && this.cueStep < this.cueSteps, learning: !this.done && this.learning,
-        stage: this.done ? 'complete' : (this.cueStep < this.cueSteps ? 'cue' : 'gap'), cueTimeMs: this.cueStep * this.dtMs, decisionMs: this.decisionMs,
+        stage: this.done ? 'complete' : (this.cueStep < this.warmupThisDecision + this.cueSteps ? (this.cueStep < this.warmupThisDecision ? 'warmup' : 'cue') : 'gap'),
+        cueTimeMs: this.cueStep * this.dtMs, decisionMs: this.decisionMs, decisionTotalMs: (this.warmupThisDecision + this.stepsPerDecision) * this.dtMs,
         groupCounts: Array.from(this.groupCounts), episodeOutput: this.episodeOutput, completed: this.trials.length, totalTrials: this.totalTrialBudget,
         simTimeS: this.simTimeS, simTime: this.simTimeS, updateCount: this.updateCount};
     }
@@ -196,6 +199,7 @@
         this.net = new LIFNetwork(this.conditionGraph, this.slowConfig, this.cueSeed);
         this.inputs = Object.fromEntries(INPUT_CODES.map(code => [code, this.net.injectPoisson(this.codebook[code], 0)]));
       }
+      this.warmupThisDecision = (this.condition === 'plasticReset' || this.decisionStep === 1) ? this.warmupSteps : 0;
       this.setCue(this.cue);
       this.cueStep = 0; this.kcSpikes = 0; this.mbonSpikes = 0; this.allSpikes = 0; this.groupCounts.fill(0);
       for (const kc of this.activeKCs) this.kcCounts[kc] = 0;
@@ -207,15 +211,17 @@
     step() {
       if (this.done) return null;
       if (this.cueStep === 0) this.startCue();
-      else if (this.cueStep === this.cueSteps) this.setCue(null);
+      else if (this.cueStep === this.warmupThisDecision + this.cueSteps) this.setCue(null);
       const spikes = this.net.step();
-      this.allSpikes += spikes.length;
-      for (const neuron of spikes) {
-        if (this.isKC[neuron]) { if (this.kcCounts[neuron]++ === 0) this.activeKCs.push(neuron); this.kcSpikes++; }
-        else { const g = this.groupOf[neuron]; if (g >= 0) { this.groupCounts[g]++; this.mbonSpikes++; } }
+      if (this.cueStep >= this.warmupThisDecision) {
+        this.allSpikes += spikes.length;
+        for (const neuron of spikes) {
+          if (this.isKC[neuron]) { if (this.kcCounts[neuron]++ === 0) this.activeKCs.push(neuron); this.kcSpikes++; }
+          else { const g = this.groupOf[neuron]; if (g >= 0) { this.groupCounts[g]++; this.mbonSpikes++; } }
+        }
       }
       this.cueStep++; this.totalSteps++;
-      if (this.cueStep < this.stepsPerDecision) return null;
+      if (this.cueStep < this.warmupThisDecision + this.stepsPerDecision) return null;
       return this.finishDecision();
     }
     tieScores() {
@@ -268,7 +274,7 @@
         groupCounts: counts, tieScores: Array.from(scores), tie, silent: this.mbonSpikes === 0, mbonSpikes: this.mbonSpikes,
         kcSpikes: this.kcSpikes, activeKcCount: this.activeKCs.length, kcFraction: this.activeKCs.length / this.annotation.kenyonCells.length,
         kcActivity: this.activeKCs.map(kc => [kc, this.kcCounts[kc]]).sort((a, b) => a[0] - b[0]), allSpikes: this.allSpikes,
-        episodeSeed: this.episodeSeed, cueSeed: this.cueSeed, windowMs: this.decisionMs, cueOffMs: this.protocol.cueMs, simTimeS: this.simTimeS,
+        episodeSeed: this.episodeSeed, cueSeed: this.cueSeed, windowMs: this.decisionMs, warmupMs: this.warmupThisDecision * this.dtMs, cueOffMs: this.protocol.cueMs, simTimeS: this.simTimeS,
         learningEnabled: this.learning, learningApplied: false, potentiated: 0, depressed: 0, rival: null, meanAbsDeltaMv: 0,
         feedbackApplied: phase === 'recall' && step > 1, updateCountBefore: this.updateCount};
       let nextCue = null, episodeEnded = false;

@@ -202,8 +202,8 @@
     text('progress-text', `${next.completed} / ${next.totalTrials} decisions`); text('time', `${next.simTimeS.toFixed(2)} s simulated`);
     text('cue', symbol(next.cue)); text('drive', next.learning ? 'ON' : 'OFF');
     if (next.groupCounts && next.stage !== 'complete') renderVote(next.groupCounts, null, null);
-    text('stage', next.stage === 'cue' ? 'Presenting cue' : next.stage === 'gap' ? 'Gap · reading state' : next.stage === 'complete' ? 'Experiment complete' : 'Awaiting episode');
-    text('trial-time', `${next.cueTimeMs.toFixed(0)} / ${decisionMs} ms`); $('clock').style.left = `${Math.min(100, next.cueTimeMs / decisionMs * 100)}%`;
+    text('stage', next.stage === 'warmup' ? 'Warm-up · cue on, not counted' : next.stage === 'cue' ? 'Presenting cue · counting MBON spikes' : next.stage === 'gap' ? 'Gap · counting MBON spikes' : next.stage === 'complete' ? 'Experiment complete' : 'Awaiting episode');
+    text('trial-time', `${next.cueTimeMs.toFixed(0)} / ${next.decisionTotalMs} ms`); $('clock').style.left = `${Math.min(100, next.cueTimeMs / next.decisionTotalMs * 100)}%`;
     text('episode', next.phase === 'complete' ? 'All conditions complete' : `${labels[next.condition]} · ${next.phase} episode ${next.episode}/${next.episodeTotal} · step ${next.step}`);
     const conditionIndex = next.phase === 'complete' ? 3 : CONDITIONS.indexOf(next.condition);
     document.querySelectorAll('.phase-track li').forEach((element, index) => {

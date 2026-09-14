@@ -109,8 +109,8 @@ test('the learning rule is reproducible from the recorded Kenyon-cell activity a
       if (trial.groupCounts[target] > trial.groupCounts[rival]) { assert.equal(trial.learningApplied, false); continue; }
       assert.equal(trial.learningApplied, true); assert.equal(trial.rival, OUTPUT_CODES[rival]);
       for (const [kc, count] of trial.kcActivity) for (const k of kcSlots.get(kc) || []) {
-        if (groups[k] === target) weights[k] = Math.fround(Math.min(1.5, weights[k] + 0.05 * count));
-        else if (groups[k] === rival) weights[k] = Math.fround(Math.max(0, weights[k] - 0.05 * count));
+        if (groups[k] === target) weights[k] = Math.fround(Math.min(1.5, weights[k] + DEFAULTS.learningRateMvPerSpike * count));
+        else if (groups[k] === rival) weights[k] = Math.fround(Math.max(0, weights[k] - DEFAULTS.learningRateMvPerSpike * count));
       }
     }
     assert.deepEqual(Array.from(weights), result.models[condition].learnedPlasticWeights, `${condition} weights replay exactly`);
@@ -140,19 +140,24 @@ test('decisions follow the MBON group vote with the declared tie-break, and reca
   assert(result.metrics.plastic.diagnostic.accuracy > result.metrics.frozen.diagnostic.accuracy, 'learning helps in the fixture');
 });
 
-test('plasticReset rebuilds the network at every cue while plastic and frozen keep one per episode; seeds pair across conditions', () => {
-  const exp = make();
+test('plasticReset rebuilds and warms the network at every cue while plastic and frozen keep one per episode; seeds pair across conditions', () => {
+  const exp = make(42, {warmupMs: 30});
   let net = null, key = null;
   while (!exp.done) {
-    exp.step();
+    const record = exp.step();
     if (exp.cueStep === 1) {
       const episodeKey = `${exp.condition}/${exp.phase}/${exp.episode}`;
-      if (exp.condition === 'plasticReset') assert.equal(exp.net.stepIndex, 1);
-      else if (episodeKey === key) assert.equal(exp.net, net); else assert.notEqual(exp.net, net);
+      if (exp.condition === 'plasticReset') { assert.equal(exp.net.stepIndex, 1); assert.equal(exp.warmupThisDecision, 30); }
+      else {
+        assert.equal(exp.warmupThisDecision, exp.decisionStep === 1 ? 30 : 0);
+        if (episodeKey === key) assert.equal(exp.net, net); else assert.notEqual(exp.net, net);
+      }
       key = episodeKey; net = exp.net;
     }
+    if (record) assert.equal(record.warmupMs, record.condition === 'plasticReset' || record.step === 1 ? 30 : 0);
   }
   const result = exp.result();
+  assert(Math.abs(result.simTimeS - result.trials.reduce((sum, row) => sum + (125 + row.warmupMs) / 1000, 0)) < 1e-9);
   const plastic = result.trials.filter(row => row.condition === 'plastic' && row.phase !== 'recall');
   for (const condition of ['plasticReset', 'frozen']) {
     const rows = result.trials.filter(row => row.condition === condition && row.phase !== 'recall');
@@ -161,7 +166,7 @@ test('plasticReset rebuilds the network at every cue while plastic and frozen ke
   const resetSeeds = result.trials.filter(row => row.condition === 'plasticReset').map(row => row.cueSeed);
   assert.equal(new Set(resetSeeds).size, resetSeeds.length);
   assert.deepEqual(result.metrics, summarizeMushroomBodyRun(result.episodes, result.trials, result.reference));
-  assert.deepEqual(finish(make()).result, result, 'seeds reproduce');
+  assert.deepEqual(finish(make(42, {warmupMs: 30})).result, result, 'seeds reproduce');
 });
 
 test('a prepared slow graph is used as-is, and invalid annotations or protocols are rejected', () => {
@@ -175,7 +180,7 @@ test('a prepared slow graph is used as-is, and invalid annotations or protocols 
   assert.throws(() => validateAnnotation({...annotation, uniglomerularPNs: [0, 1, 2, 3, 4, 5, 6, 40]}, 40), /Invalid/);
   assert.throws(() => validateAnnotation({...annotation, uniglomerularPNs: [8, 9, 10, 11, 12, 13, 14, 15]}, 40), /disjoint/);
   for (const options of [{phrase: 'tox'}, {trainEpisodes: 0}, {recallEpisodes: 0}, {maxDecisions: 0}, {learningRateMvPerSpike: 0}, {maxWeightMv: 0},
-    {cueMs: 100.5}, {gapMs: -1}, {cueRateHz: 1001}, {slowWeightScale: 0}])
+    {cueMs: 100.5}, {gapMs: -1}, {warmupMs: -1}, {cueRateHz: 1001}, {slowWeightScale: 0}])
     assert.throws(() => make(1, options), `${JSON.stringify(options)} should be rejected`);
   const negative = fixture(); negative.graph.weights[negative.graph.indptr[8]] = -1;
   assert.throws(() => new MushroomBodyExperiment(negative.graph, negative.manifest, negative.annotation, 1, SMALL), /excitatory/);
