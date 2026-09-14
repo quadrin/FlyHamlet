@@ -13,8 +13,7 @@ const SIM = {
 };
 
 function graph(n = 9) {
-  return {n, indptr: new Uint32Array(n + 1), indices: new Uint32Array(),
-    weights: new Float32Array()};
+  return {n, indptr: new Uint32Array(n + 1), indices: new Uint32Array(), weights: new Float32Array()};
 }
 
 function manifest() {
@@ -31,24 +30,45 @@ function manifest() {
     layout: [...'abcdefghijklmnopqrstuvwxyz ']};
 }
 
-test('giant-fiber activity can launch the fly and the downstream plant lands it', () => {
+test('giant-fiber takeoff spins a physical wing oscillator whose strokes create lift', () => {
   const arena = new FlyArena(graph(), manifest(), 1);
   for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
-  const takeoff = arena.stepControl();
-  assert.equal(takeoff.key, null);
+  let maxZ = 0;
+  const initialPhase = arena.fly.wingPhase;
+  for (let i = 0; i < 40; i++) {
+    const result = arena.stepControl();
+    assert.equal(result.key, null);
+    maxZ = Math.max(maxZ, arena.fly.z);
+  }
   assert.equal(arena.fly.airborne, true);
-  assert(arena.fly.z > 0);
-  assert(arena.fly.vz > 0);
+  assert(arena.fly.wingFrequency > 150);
+  assert.notEqual(arena.fly.wingPhase, initialPhase);
+  assert(arena.fly.leftWingAmplitude > 0);
+  assert(arena.fly.rightWingAmplitude > 0);
+  assert(maxZ > 0, 'wing strokes must produce positive altitude');
   const sample = arena.sample();
-  assert.equal(sample.airborne, true);
-  assert(sample.z_mm > 0);
-  assert(Number.isFinite(sample.vx_mm_s));
-  assert(Number.isFinite(sample.roll_deg));
+  assert(sample.wing_frequency_hz > 150);
+  assert(Number.isFinite(sample.wing_phase_rad));
 
-  for (let i = 0; i < 4000 && arena.fly.airborne; i++) arena.stepControl();
+  for (let i = 0; i < 5000 && arena.fly.airborne; i++) arena.stepControl();
   assert.equal(arena.fly.airborne, false);
   assert.equal(arena.fly.z, 0);
-  assert.equal(arena.fly.vz, 0);
+  assert.equal(arena.fly.wingFrequency, 0);
+});
+
+test('walking advances an alternating gait oscillator and ground traction moves the body', () => {
+  const arena = new FlyArena(graph(), manifest(), 3);
+  const x0 = arena.fly.x;
+  const phase0 = arena.fly.gaitPhase;
+  for (let i = 0; i < 80; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, false);
+  assert(arena.fly.gaitFrequency > 0);
+  assert.notEqual(arena.fly.gaitPhase, phase0);
+  assert(arena.fly.x > x0, 'stance traction should move the body forward');
+  assert.equal(arena.fly.wingFrequency, 0);
+  const sample = arena.sample();
+  assert(sample.gait_frequency_hz > 0);
+  assert(sample.gait_duty_factor > 0.5 && sample.gait_duty_factor < 0.7);
 });
 
 test('flying across a key region does not type until keyboard contact', () => {
@@ -57,7 +77,7 @@ test('flying across a key region does not type until keyboard contact', () => {
   arena.fly.airborne = true;
   arena.fly.z = 0.5;
   arena.fly.vz = 0;
-  arena.fly.wingPower = 1;
+  arena.fly.wingDrive = 1;
   arena.fly.x = 7.5;
   arena.fly.y = 1.5;
   const airborne = arena.stepControl();
@@ -68,7 +88,7 @@ test('flying across a key region does not type until keyboard contact', () => {
   arena.fly.airborne = false;
   arena.fly.z = 0;
   arena.fly.vz = 0;
-  arena.fly.wingPower = 0;
+  arena.fly.wingDrive = 0;
   const contact = arena.stepControl();
   assert(contact.key, 'contact with a new key region should type');
   assert.notEqual(contact.key[1], startingKey);
