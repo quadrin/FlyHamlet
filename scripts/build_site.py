@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the GitHub Pages viewer, learning lab, and saved trajectory files."""
+"""Build the GitHub Pages viewer, experiment labs, and saved trajectory files."""
 import glob, json, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,8 +29,10 @@ def main(arena_dir="results/arena"):
                                      + (ROOT / "site/recall-body.html").read_text() + "</body></html>\n")
     (ROOT / "memory.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/memory-head.html").read_text() + "</head><body>"
                                      + (ROOT / "site/memory-body.html").read_text() + "</body></html>\n")
+    (ROOT / "sequence.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/sequence-head.html").read_text() + "</head><body>"
+                                       + (ROOT / "site/sequence-body.html").read_text() + "</body></html>\n")
     (ROOT / ".nojekyll").write_text("")
-    print(f"wrote index.html, learn.html, recall.html, memory.html and {n} fly data files to site/data/")
+    print(f"wrote index.html, learn.html, recall.html, memory.html, sequence.html and {n} fly data files to site/data/")
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
