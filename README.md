@@ -880,8 +880,8 @@ fly's own projection neurons, the only synapses that change are the existing
 Kenyon-cell-to-MBON connections of the mushroom body, and the readout is a fixed
 vote among MBON groups. During recall the winning letter is fed straight back as
 the next cue. Every session computes the full network. The default speed is 1×;
-the protocol simulates about **180 seconds** and less when episodes end early, with
-device-dependent wall time. Pause/resume, new seeds, and exports work as before.
+the protocol simulates about **235 seconds** and less when episodes end early, with
+device-dependent wall time; a full run took about 22 minutes on the development machine. Pause/resume, new seeds, and exports work as before.
 
 **Cells.** `scripts/export_mushroom_body.py` reads the public FlyWire v783 neurons
 and classification tables, verifies them against the hashes in
@@ -948,7 +948,39 @@ node scripts/benchmark_mb.cjs --seeds 42,43,44 --out results/mb_benchmark
 node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs tests/test_mb_model.cjs tests/test_mb_worker.cjs
 ```
 
-MB_RESULTS_PLACEHOLDER
+Development runs used unchanged defaults with seeds **42, 43 and 44**. The
+synapses learned. With frozen synapses the fixed readout scored **8.8%, 7.0% and
+5.3%** on held-out next letters, at or below the 12.5% chance level, and its
+autonomous output was a string of `b`. After twelve training episodes the plastic
+condition scored **78.9%, 77.2% and 66.7%** with learning off, from training curves
+that started near chance. About 22,500 of the 62,261 Kenyon-cell-to-MBON synapses
+changed, the mean weight rose from 0.34 to about 0.70 mV, and MBON spikes per cue
+rose from about 11 to about 60. The reset condition, which sees the current letter
+only, reached **59.6%, 61.4% and 63.2%**; the 15-point gap in two seeds and 3-point
+gap in the third is the part of next-letter prediction that used retained state.
+
+Autonomous recall did not use it. Every plastic and reset episode that started
+correctly typed `to be` and then stopped with END, sometimes after one more `be`;
+chain lengths averaged **4.5, 3.8 and 2.7** for the plastic condition and **5.3,
+5.2 and 4.3** for the reset condition, against the no-memory comparator's 6. The
+letter `e` is followed by a space once and by END once in the phrase, and the
+synapses of the `e`-driven Kenyon cells settled on END. With a teacher the network
+could sometimes tell the two `e`s apart; on its own feedback it could not, and
+nothing after the first error is recoverable because the wrong letter becomes
+the next cue. The plastic condition was not better than its reset control at
+recall in any seed.
+
+What this does and does not show. Existing synapses of the simulated mushroom
+body can store letter-to-next-letter transitions under an imposed slower model,
+sparse projection-neuron codes and an external teacher, and a fixed MBON vote
+can read them back. They did not store position in the phrase well enough to
+recite it: the memory the fly's own circuit holds here is the same
+current-letter memory that the no-memory comparator has, plus a little. The
+Chain lab's external readout on the same slow model recited the whole phrase
+because it read 256 pooled state features; the mushroom-body vote sees only the
+Kenyon cells the current letter recruits. Reciting Hamlet would require this
+layer to disambiguate tens of thousands of repeated contexts; it could not
+disambiguate two.
 
 The [benchmark report](results/mb_benchmark/report.md) links complete raw runs as
 gzip-compressed JSON, including initial and learned synaptic weights, every
