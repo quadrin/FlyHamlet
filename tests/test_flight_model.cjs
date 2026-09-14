@@ -56,11 +56,23 @@ test('giant-fiber takeoff spins a physical wing oscillator whose strokes create 
   assert.equal(arena.fly.wingFrequency, 0);
 });
 
+test('a silent brain leaves the fly standing still', () => {
+  const arena = new FlyArena(graph(), manifest(), 3);
+  const x0 = arena.fly.x, y0 = arena.fly.y;
+  for (let i = 0; i < 80; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, false);
+  assert.equal(arena.fly.gaitFrequency, 0, 'no descending drive means no stepping');
+  assert(Math.hypot(arena.fly.x - x0, arena.fly.y - y0) < 1e-6,
+    'the fly must not creep when the descending neurons are silent');
+});
+
 test('walking advances an alternating gait oscillator and ground traction moves the body', () => {
   const arena = new FlyArena(graph(), manifest(), 3);
+  const drive = () => { for (let i = 0; i < 500; i++) { arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); } };
+  drive();
   const x0 = arena.fly.x;
   const phase0 = arena.fly.gaitPhase;
-  for (let i = 0; i < 80; i++) arena.stepControl();
+  for (let i = 0; i < 80; i++) { arena.stepControl(); drive(); }
   assert.equal(arena.fly.airborne, false);
   assert(arena.fly.gaitFrequency > 0);
   assert.notEqual(arena.fly.gaitPhase, phase0);
@@ -69,6 +81,43 @@ test('walking advances an alternating gait oscillator and ground traction moves 
   const sample = arena.sample();
   assert(sample.gait_frequency_hz > 0);
   assert(sample.gait_duty_factor > 0.5 && sample.gait_duty_factor < 0.7);
+});
+
+test('a flight bout ends once the giant fibre goes quiet', () => {
+  const arena = new FlyArena(graph(), manifest(), 1);
+  for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
+  for (let i = 0; i < 40; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, true, 'the giant fibre should launch the fly');
+
+  // Hold the locomotor drive high but let the giant fibre fall silent. Walking
+  // commands alone must not keep the fly airborne.
+  let steps = 0;
+  while (arena.fly.airborne && steps < 20000) {
+    arena.stepControl();
+    for (let i = 0; i < 500; i++) { arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); }
+    steps++;
+  }
+  assert.equal(arena.fly.airborne, false, 'the bout must end without the giant fibre');
+  assert(steps * 0.001 < 12, `bout ran ${(steps * 0.001).toFixed(2)}s after the giant fibre stopped`);
+});
+
+test('steering in flight fires saccades rather than a steady turn', () => {
+  const arena = new FlyArena(graph(), manifest(), 1);
+  for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
+  for (let i = 0; i < 40; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, true);
+
+  const rates = [];
+  for (let i = 0; i < 600 && arena.fly.airborne; i++) {
+    for (let k = 0; k < 500; k++) { arena.groups.GF.push(1); arena.groups.turn_L.push(1); }
+    arena.stepControl();
+    rates.push(Math.abs(arena.fly.omega));
+  }
+  const peak = Math.max(...rates);
+  const median = [...rates].sort((a, b) => a - b)[Math.floor(rates.length / 2)];
+  assert(peak > 0, 'the fly should turn at all');
+  assert(peak > median * 3,
+    `turning should burst, not hold steady (peak ${peak.toFixed(2)} vs median ${median.toFixed(2)} rad/s)`);
 });
 
 test('flying across a key region does not type until keyboard contact', () => {

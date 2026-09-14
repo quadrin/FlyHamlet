@@ -24,6 +24,11 @@
     wing_stroke_amplitude_deg: 72,
     wing_rise_s: 0.020,
     wing_decay_s: 0.45,
+    // A flight bout must end. Walking commands alone must not hold the fly up,
+    // or a takeoff becomes a cruise it never leaves. The locomotor share of the
+    // wing drive fades over the bout; only the giant fibre renews it.
+    flight_locomotor_gain: 0.78,
+    flight_sustain_s: 0.8,
     wing_turn_asymmetry: 0.22,
     wing_force_response_s: 0.030,
     wing_torque_response_s: 0.040,
@@ -44,6 +49,21 @@
     gait_frequency_max_hz: 18,
     gait_duty_slow: 0.68,
     gait_duty_fast: 0.54,
+    // A quiet brain should leave the fly standing, not creeping. This overrides
+    // arena.motor.base_speed_mm_s for the live view only; the recorded
+    // experiments in flyhamlet/ keep their own value.
+    ground_base_speed_mm_s: 0,
+    // Real flies fly in straight runs broken by saccades: fast body turns of
+    // tens of degrees in tens of milliseconds. Part of the turn demand still
+    // steers continuously; the rest charges the next saccade.
+    yaw_smooth_share: 0.25,
+    saccade_charge_rate_deg_s: 400,
+    saccade_trigger_deg: 22,
+    saccade_max_deg: 90,
+    saccade_duration_s: 0.055,
+    saccade_refractory_s: 0.09,
+    saccade_stop_drag_s: 60,
+    saccade_charge_decay_s: 0.5,
     ground_accel_mm_s2: 600,
     ground_drag_s: 18,
     ground_yaw_accel_rad_s2: 150,
@@ -65,6 +85,8 @@
       f.wingTorque = 0;
       f.gaitPhase = 0; f.gaitFrequency = 0; f.gaitDuty = this.flightCfg.gait_duty_slow;
       f.airborne = false; f.takeoffArmed = true;
+      f.airborneTime = 0;
+      f.turnCharge = 0; f.saccadeLeft = 0; f.saccadeOmega = 0; f.saccadeCooldown = 0;
     }
 
     sample() {
@@ -85,7 +107,10 @@
       const c = this.flightCfg, f = this.fly;
       const gfDrive = clamp(gf / c.gf_full_scale_hz, 0, 1);
       const locomotorDrive = clamp((fwd + bwd) / c.motor_full_scale_hz, 0, 1);
-      const targetDrive = f.airborne ? clamp(Math.max(gfDrive, 0.78 * locomotorDrive), 0, 1) : 0;
+      const sustain = Math.exp(-f.airborneTime / Math.max(1e-3, c.flight_sustain_s));
+      const targetDrive = f.airborne
+        ? clamp(Math.max(gfDrive, c.flight_locomotor_gain * locomotorDrive * sustain), 0, 1)
+        : 0;
 
       const tau = targetDrive > f.wingDrive ? c.wing_rise_s : c.wing_decay_s;
       f.wingDrive += (targetDrive - f.wingDrive) * (1 - Math.exp(-dt / Math.max(1e-4, tau)));
@@ -112,6 +137,48 @@
       return {totalForce: f.wingForce, turnTorque: f.wingTorque};
     }
 
+    /* Steering in flight. A quarter of the turn demand steers continuously; the
+     * rest charges a saccade, which fires as a short burst of high yaw rate.
+     * A steady torque alone draws smooth arcs, and smooth arcs are the clearest
+     * sign that this is not a fly. */
+    updateSaccade(dt, turnNorm, turnTorque) {
+      const c = this.flightCfg, f = this.fly;
+      const charge = () => {
+        f.turnCharge += turnNorm * c.saccade_charge_rate_deg_s * dt;
+        f.turnCharge *= Math.exp(-dt / Math.max(1e-3, c.saccade_charge_decay_s));
+      };
+
+      if (f.saccadeLeft > 0) {
+        f.saccadeLeft = Math.max(0, f.saccadeLeft - dt);
+        f.omega = f.saccadeOmega;
+        if (f.saccadeLeft === 0) f.saccadeCooldown = c.saccade_refractory_s;
+        return;
+      }
+
+      if (f.saccadeCooldown > 0) {
+        // A saccade is stopped by counter-torque. Left to the ordinary yaw drag
+        // the body coasts for 140 ms and the turn never reads as a burst.
+        f.saccadeCooldown = Math.max(0, f.saccadeCooldown - dt);
+        f.omega -= c.saccade_stop_drag_s * f.omega * dt;
+        charge();
+        return;
+      }
+
+      charge();
+
+      if (Math.abs(f.turnCharge) >= c.saccade_trigger_deg) {
+        const amplitude = clamp(f.turnCharge, -c.saccade_max_deg, c.saccade_max_deg);
+        f.saccadeLeft = c.saccade_duration_s;
+        f.saccadeOmega = amplitude * Math.PI / 180 / c.saccade_duration_s;
+        f.turnCharge = 0;
+        f.omega = f.saccadeOmega;
+        return;
+      }
+
+      f.omega += (c.yaw_accel_rad_s2 * turnTorque * c.yaw_smooth_share
+        - c.yaw_drag_s * f.omega) * dt;
+    }
+
     updateFlight(dt, fwd, bwd, turnNorm, wing) {
       const c = this.flightCfg, f = this.fly;
       const signedDrive = clamp((fwd - bwd) / c.motor_full_scale_hz, -1, 1);
@@ -130,7 +197,8 @@
       f.vy += (forwardWing * forwardY + lateralWing * lateralY - c.air_drag_s * f.vy) * dt;
       f.vz += (verticalWing - c.gravity_mm_s2 - c.vertical_drag_s * f.vz) * dt;
 
-      f.omega += (c.yaw_accel_rad_s2 * wing.turnTorque - c.yaw_drag_s * f.omega) * dt;
+      f.airborneTime += dt;
+      this.updateSaccade(dt, turnNorm, wing.turnTorque);
       f.heading = modulo(f.heading + f.omega * dt + Math.PI, TAU) - Math.PI;
 
       const nx = f.x + f.vx * dt, ny = f.y + f.vy * dt;
@@ -149,6 +217,8 @@
         f.z = 0; f.vz = 0;
         if (f.wingDrive < 0.32 && wing.totalForce < c.gravity_mm_s2 * 0.75) {
           f.airborne = false;
+          f.airborneTime = 0;
+          f.turnCharge = 0; f.saccadeLeft = 0; f.saccadeCooldown = 0;
           f.wingDrive = 0; f.wingFrequency = 0;
           f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
           f.wingForce = 0; f.wingTorque = 0;
@@ -160,7 +230,8 @@
 
     updateWalking(dt, fwd, bwd, turnNorm) {
       const c = this.flightCfg, m = this.cfg.arena.motor, f = this.fly;
-      const desiredSpeed = clamp(m.base_speed_mm_s + m.speed_gain * fwd - m.backward_gain * bwd,
+      const baseSpeed = c.ground_base_speed_mm_s ?? m.base_speed_mm_s;
+      const desiredSpeed = clamp(baseSpeed + m.speed_gain * fwd - m.backward_gain * bwd,
         -m.max_speed_mm_s, m.max_speed_mm_s);
       const walkDrive = clamp(desiredSpeed / Math.max(1e-6, m.max_speed_mm_s), -1, 1);
       const gaitActivity = clamp(Math.max(Math.abs(walkDrive), 0.35 * Math.abs(turnNorm)), 0, 1);
@@ -193,6 +264,7 @@
       f.wingDrive = 0; f.wingFrequency = 0;
       f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
       f.wingForce = 0; f.wingTorque = 0;
+      f.airborneTime = 0; f.saccadeLeft = 0;
       const settle = 1 - Math.exp(-c.attitude_response_s * dt);
       f.roll += (0 - f.roll) * settle; f.pitch += (0 - f.pitch) * settle;
       f.v = f.vx * Math.cos(f.heading) + f.vy * Math.sin(f.heading);
