@@ -52,6 +52,9 @@
   const WING_SHEET_SCALE = 0.0030; // sheet pixel -> body size units
   const WING_ANCHOR_Y = -0.06;      // wing root on the thorax, fraction of size
   const WING_BLUR_ALPHA = 0.11;     // opacity of one stroke in the blur
+  const WING_REST_CELL = 0;         // the narrowest pair in the sheet
+  const WING_REST_SCALE = 0.80;     // folded wings sit closer to the body
+  const WING_REST_ALPHA = 0.78;
   const SHADOW_SPRITE_GAIN = 1.7;    // the sprite is softer than the old gradient
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
   let renderSample = null;
@@ -103,7 +106,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '8');
+          versioned.searchParams.set('v', '9');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -262,6 +265,23 @@
     }
   }
 
+  /* The sheet holds flight poses only. A fly at rest folds its wings back over
+   * the abdomen, so take the narrowest pair and mirror it head to tail. The
+   * body art does carry wing stubs, but they are too small to read at this
+   * size, which made a grounded fly look wingless. */
+  function drawRestingWings(sample, size) {
+    if (!ready(wingSheet)) return;
+    if (Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03) return;
+    const phase = TAU * (WING_REST_CELL + 0.5) / WING_CELLS.length;
+    ctx.save();
+    ctx.scale(1, -1);
+    // scale(1,-1) then this translate keeps the hinge on the thorax
+    ctx.translate(0, -WING_ANCHOR_Y * size * (1 + WING_REST_SCALE));
+    drawWingSprite(-1, size * WING_REST_SCALE, phase, 1, WING_REST_ALPHA);
+    drawWingSprite(1, size * WING_REST_SCALE, phase, 1, WING_REST_ALPHA);
+    ctx.restore();
+  }
+
   function drawFallback(size) {
     ctx.fillStyle = '#795633'; ctx.beginPath(); ctx.ellipse(0, size * 0.06, size * 0.085, size * 0.23, 0, 0, TAU); ctx.fill();
     ctx.fillStyle = '#853e26'; for (const side of [-1,1]) { ctx.beginPath(); ctx.ellipse(side * size * .057, -size * .17, size * .053, size * .069, side * .2, 0, TAU); ctx.fill(); }
@@ -287,6 +307,7 @@
       const sh = size * sprite.naturalHeight / sprite.naturalWidth;
       ctx.drawImage(sprite, -size / 2, -sh / 2, size, sh);
     } else drawFallback(size);
+    drawRestingWings(sample, size);
     ctx.restore();
   }
 
