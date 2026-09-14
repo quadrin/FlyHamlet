@@ -1,8 +1,14 @@
 # Fly artwork
 
 The live view (`site/flight-view.js`) draws three sprites. The body is always
-needed. The shadow and the wings are optional: if a file is missing or does not
-load, the renderer draws the old procedural shape instead.
+needed.
+
+The body art owns the legs and the wings. The live view draws no legs. It
+animates wings only when `fly-wings.png` loads. Thus the fly never shows two
+sets of wings. But you must keep the two files in agreement: if you add
+`fly-wings.png`, give the body image tucked wings, or small wings, or no wings.
+
+If `fly-shadow.png` does not load, the view draws a gradient instead.
 
 ## `fruit-fly.png` — body
 
@@ -11,6 +17,10 @@ Give the fly tucked wings: the live view animates the wings from
 `fly-wings.png` and draws them behind the body.
 
 The legs come from this image. The live view does not draw legs.
+
+The wings also come from this image while `fly-wings.png` is absent. Add both
+files together: an old body image with spread wings, plus an animated pair,
+gives the fly four wings.
 
 Art direction: amber striped abdomen, red compound eyes, six fine legs,
 head pointing upward, isolated background.

@@ -86,7 +86,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '5');
+          versioned.searchParams.set('v', '6');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -193,42 +193,6 @@
     ctx.restore();
   }
 
-  function drawWing(side, size, phase, amplitude, alpha) {
-    if (amplitude <= 0.01) return;
-    const maxStroke = (metadata?.flight?.wing_stroke_amplitude_deg || 72) * Math.PI / 180;
-    const stroke = Math.sin(phase) * maxStroke * 0.85 * amplitude;
-    const span = size * (0.28 + 0.04 * amplitude);
-    const chord = size * 0.16;
-
-    ctx.save();
-    ctx.translate(side * size * 0.055, -size * 0.03);
-    ctx.rotate(side * (0.70 + stroke));
-    ctx.globalAlpha = alpha;
-
-    ctx.fillStyle = 'rgba(238,242,236,0.56)';
-    ctx.strokeStyle = 'rgba(110,102,88,0.42)';
-    ctx.lineWidth = Math.max(0.7, size * 0.006);
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.bezierCurveTo(side * span * 0.22, -chord * 0.75,
-                      side * span * 0.95, -chord * 0.78,
-                      side * span, -chord * 0.08);
-    ctx.bezierCurveTo(side * span * 0.88, chord * 0.34,
-                      side * span * 0.30, chord * 0.28,
-                      0, 0);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(side * span * 0.68, -chord * 0.34);
-    ctx.moveTo(side * span * 0.16, -chord * 0.10);
-    ctx.lineTo(side * span * 0.74, 0);
-    ctx.stroke();
-    ctx.restore();
-  }
-
   function drawWingSprite(side, size, phase, amplitude, alpha) {
     if (amplitude <= 0.01) return;
     const cellW = wingSheet.naturalWidth / WING_SHEET_COLS;
@@ -252,6 +216,9 @@
   }
 
   function drawWings(sample, size) {
+    // The body sprite already carries a pair of wings. Animate a second pair
+    // only when fly-wings.png is available, so the fly never grows four wings.
+    if (!ready(wingSheet)) return;
     const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
     if (!airborne) return;
 
@@ -259,11 +226,10 @@
     const frequency = sample.wing_frequency_hz || 0;
     const leftAmp = sample.wing_left_amplitude ?? sample.wing_power ?? 0;
     const rightAmp = sample.wing_right_amplitude ?? sample.wing_power ?? 0;
-    const paint = ready(wingSheet) ? drawWingSprite : drawWing;
 
     if (reducedMotion.matches || frequency <= 0) {
-      paint(-1, size, phase, leftAmp, 0.42);
-      paint(1, size, phase, rightAmp, 0.42);
+      drawWingSprite(-1, size, phase, leftAmp, 0.42);
+      drawWingSprite(1, size, phase, rightAmp, 0.42);
       return;
     }
 
@@ -272,8 +238,8 @@
     for (let i = ghosts - 1; i >= 0; --i) {
       const p = phase - TAU * frequency * exposure * i / (ghosts - 1);
       const a = i === 0 ? 0.34 : 0.05 + 0.07 * (1 - i / ghosts);
-      paint(-1, size, p, leftAmp, a);
-      paint(1, size, p, rightAmp, a);
+      drawWingSprite(-1, size, p, leftAmp, a);
+      drawWingSprite(1, size, p, rightAmp, a);
     }
   }
 
