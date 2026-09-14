@@ -1,0 +1,61 @@
+.chain-cue {
+  width: 80%;
+  background: #adcab2;
+  border-right: 1px solid #718c76;
+}
+.chain-gap {
+  flex: 1;
+  background: #dce6cf;
+}
+.chain-timeline span {
+  font-size: .625rem;
+}
+.chain-current {
+  position: relative;
+  min-height: 34px;
+  margin: 6px 0 10px;
+  font: 600 1.125rem/1.6 'Courier New',monospace;
+  letter-spacing: .14em;
+  white-space: pre;
+  overflow-x: auto;
+}
+.chain-reference {
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #b7c3c2;
+}
+.chain-typed {
+  position: relative;
+  color: #223f3a;
+}
+.chain-typed .is-wrong {
+  color: #a23a2c;
+  text-decoration: underline;
+}
+.chain-typed .is-end {
+  color: #4b7c66;
+  font-size: .75em;
+  letter-spacing: 0;
+  margin-left: .5em;
+}
+.chain-workspace .memory-log .typed {
+  min-height: 200px;
+  max-height: 230px;
+}
+.chain-table td b {
+  font-size: .8125rem;
+  overflow-wrap: anywhere;
+}
+.chain-table td .chain-outputs {
+  display: block;
+  font: .625rem/1.7 'Courier New',monospace;
+  letter-spacing: .08em;
+  white-space: pre;
+  overflow-x: auto;
+}
+@media(max-width:600px) {
+  .chain-current {
+    font-size: .875rem;
+  }
+}

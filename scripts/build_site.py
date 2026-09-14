@@ -31,8 +31,10 @@ def main(arena_dir="results/arena"):
                                      + (ROOT / "site/memory-body.html").read_text() + "</body></html>\n")
     (ROOT / "sequence.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/sequence-head.html").read_text() + "</head><body>"
                                        + (ROOT / "site/sequence-body.html").read_text() + "</body></html>\n")
+    (ROOT / "chain.html").write_text("<!doctype html>\n<html lang=\"en\"><head>" + (ROOT / "site/chain-head.html").read_text() + "</head><body>"
+                                    + (ROOT / "site/chain-body.html").read_text() + "</body></html>\n")
     (ROOT / ".nojekyll").write_text("")
-    print(f"wrote index.html, learn.html, recall.html, memory.html, sequence.html and {n} fly data files to site/data/")
+    print(f"wrote index.html, learn.html, recall.html, memory.html, sequence.html, chain.html and {n} fly data files to site/data/")
 
 if __name__ == "__main__":
     main(*sys.argv[1:])
