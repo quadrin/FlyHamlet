@@ -90,9 +90,6 @@
       f.leftWingAmplitude = clamp(f.wingDrive * (1 - c.wing_turn_asymmetry * turnNorm), 0, 1);
       f.rightWingAmplitude = clamp(f.wingDrive * (1 + c.wing_turn_asymmetry * turnNorm), 0, 1);
 
-      // Asynchronous flight muscle: neural drive sets oscillator power/frequency;
-      // stretch activation supplies repeated wing strokes. Aerodynamic force scales
-      // with stroke velocity squared, so the actual simulated flap creates lift.
       const strokeVelocity = Math.abs(Math.cos(f.wingPhase));
       const frequencyScale = f.wingFrequency / c.wing_frequency_max_hz;
       const leftForce = c.max_wing_accel_mm_s2 * f.leftWingAmplitude ** 2
@@ -138,10 +135,16 @@
         if (f.vz > 0) f.vz = -f.vz * c.ceiling_restitution;
       }
       if (f.z <= 0 && f.vz <= 0) {
-        f.z = 0; f.vz = 0; f.airborne = false;
-        f.wingDrive = 0; f.wingFrequency = 0;
-        f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
-        f.roll *= 0.35; f.pitch *= 0.35;
+        f.z = 0; f.vz = 0;
+        // During takeoff the asynchronous wing motor may need several strokes to
+        // build enough force. Stay in flight mode while the wings are strongly
+        // driven; settle into contact only after aerodynamic support has faded.
+        if (f.wingDrive < 0.32 && wing.totalForce < c.gravity_mm_s2 * 0.75) {
+          f.airborne = false;
+          f.wingDrive = 0; f.wingFrequency = 0;
+          f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
+          f.roll *= 0.35; f.pitch *= 0.35;
+        }
       }
       f.v = f.vx * Math.cos(f.heading) + f.vy * Math.sin(f.heading);
     }
@@ -159,9 +162,6 @@
       const direction = walkDrive < -0.02 ? -1 : 1;
       f.gaitPhase = modulo(f.gaitPhase + direction * TAU * f.gaitFrequency * dt, TAU);
 
-      // Modified tripod groups alternate by pi. Stance legs supply traction; swing
-      // legs reposition. The summed stance pulse makes the leg cycle generate the
-      // body's ground acceleration instead of moving x/y kinematically.
       const phases = [0, Math.PI, 0, Math.PI, 0, Math.PI];
       let traction = 0;
       for (const offset of phases) {
