@@ -56,11 +56,34 @@ test('giant-fiber takeoff spins a physical wing oscillator whose strokes create 
   assert.equal(arena.fly.wingFrequency, 0);
 });
 
+test('the base speed is the engine, so zeroing it stops the fly dead', () => {
+  // Measured on the real connectome with ground_base_speed_mm_s at 0: every
+  // descending group sat at 0.00 Hz for 800 simulated seconds and the fly never
+  // moved. The descending neurons answer looming, looming needs a nearby wall,
+  // and only the base speed carries the fly to one. The knob exists, but the
+  // default has to stay null or the model deadlocks.
+  const frozen = manifest();
+  frozen.config.arena.flight.ground_base_speed_mm_s = 0;
+  const still = new FlyArena(graph(), frozen, 3);
+  const sx = still.fly.x, sy = still.fly.y;
+  for (let i = 0; i < 80; i++) still.stepControl();
+  assert(Math.hypot(still.fly.x - sx, still.fly.y - sy) < 1e-9,
+    'zero base speed must stop the creep');
+
+  const normal = new FlyArena(graph(), manifest(), 3);
+  const nx = normal.fly.x, ny = normal.fly.y;
+  for (let i = 0; i < 80; i++) normal.stepControl();
+  assert(Math.hypot(normal.fly.x - nx, normal.fly.y - ny) > 0.01,
+    'the default must keep the fly exploring, or it never reaches a wall to sense');
+});
+
 test('walking advances an alternating gait oscillator and ground traction moves the body', () => {
   const arena = new FlyArena(graph(), manifest(), 3);
+  const drive = () => { for (let i = 0; i < 500; i++) { arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); } };
+  drive();
   const x0 = arena.fly.x;
   const phase0 = arena.fly.gaitPhase;
-  for (let i = 0; i < 80; i++) arena.stepControl();
+  for (let i = 0; i < 80; i++) { arena.stepControl(); drive(); }
   assert.equal(arena.fly.airborne, false);
   assert(arena.fly.gaitFrequency > 0);
   assert.notEqual(arena.fly.gaitPhase, phase0);
@@ -69,6 +92,46 @@ test('walking advances an alternating gait oscillator and ground traction moves 
   const sample = arena.sample();
   assert(sample.gait_frequency_hz > 0);
   assert(sample.gait_duty_factor > 0.5 && sample.gait_duty_factor < 0.7);
+});
+
+test('a flight bout ends even while every descending drive is held high', () => {
+  const arena = new FlyArena(graph(), manifest(), 1);
+  for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
+  for (let i = 0; i < 40; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, true, 'the giant fibre should launch the fly');
+
+  // Hold BOTH the locomotor drive and the giant fibre at full rate. Neither may
+  // hold the fly up: near a wall the looming response keeps the giant fibre
+  // firing, so if it could sustain a bout the fly would never come down.
+  let steps = 0;
+  while (arena.fly.airborne && steps < 20000) {
+    arena.stepControl();
+    for (let i = 0; i < 500; i++) {
+      arena.groups.fwd_L.push(1); arena.groups.fwd_R.push(1); arena.groups.GF.push(1);
+    }
+    steps++;
+  }
+  assert.equal(arena.fly.airborne, false, 'the bout must end even under sustained drive');
+  assert(steps * 0.001 < 6, `bout ran ${(steps * 0.001).toFixed(2)}s under sustained drive`);
+});
+
+test('steering in flight fires saccades rather than a steady turn', () => {
+  const arena = new FlyArena(graph(), manifest(), 1);
+  for (let i = 0; i < 500; i++) arena.groups.GF.push(1);
+  for (let i = 0; i < 40; i++) arena.stepControl();
+  assert.equal(arena.fly.airborne, true);
+
+  const rates = [];
+  for (let i = 0; i < 600 && arena.fly.airborne; i++) {
+    for (let k = 0; k < 500; k++) { arena.groups.GF.push(1); arena.groups.turn_L.push(1); }
+    arena.stepControl();
+    rates.push(Math.abs(arena.fly.omega));
+  }
+  const peak = Math.max(...rates);
+  const median = [...rates].sort((a, b) => a - b)[Math.floor(rates.length / 2)];
+  assert(peak > 0, 'the fly should turn at all');
+  assert(peak > median * 3,
+    `turning should burst, not hold steady (peak ${peak.toFixed(2)} vs median ${median.toFixed(2)} rad/s)`);
 });
 
 test('flying across a key region does not type until keyboard contact', () => {
