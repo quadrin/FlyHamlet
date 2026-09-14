@@ -14,12 +14,53 @@
   if (!arena || !stage || !keyGrid || !sessionSelect) return;
 
   const TAU = 2 * Math.PI;
+  const modulo = (value, modulus) => ((value % modulus) + modulus) % modulus;
   const overscan = 64;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const scriptURL = document.currentScript?.src || new URL('site/flight-view.js', document.baseURI).href;
   const sprite = new Image();
   sprite.src = new URL('assets/fruit-fly.png', scriptURL).href;
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
+  let renderSample = null;
+  let lastFrameAt = 0;
+
+  function lerpAngle(a, b, t) {
+    let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (d < -Math.PI) d += Math.PI * 2;
+    return a + d * t;
+  }
+
+  function smoothSample(target, dt) {
+    if (!target) return null;
+    if (!renderSample) {
+      renderSample = {...target};
+      return renderSample;
+    }
+    const a = 1 - Math.exp(-dt / 0.045);
+    renderSample.x += (target.x - renderSample.x) * a;
+    renderSample.y += (target.y - renderSample.y) * a;
+    renderSample.z_mm += ((target.z_mm || 0) - (renderSample.z_mm || 0)) * a;
+    renderSample.vx_mm_s += ((target.vx_mm_s || 0) - (renderSample.vx_mm_s || 0)) * a;
+    renderSample.vy_mm_s += ((target.vy_mm_s || 0) - (renderSample.vy_mm_s || 0)) * a;
+    renderSample.vz_mm_s += ((target.vz_mm_s || 0) - (renderSample.vz_mm_s || 0)) * a;
+    renderSample.pitch_deg += ((target.pitch_deg || 0) - (renderSample.pitch_deg || 0)) * a;
+    renderSample.roll_deg += ((target.roll_deg || 0) - (renderSample.roll_deg || 0)) * a;
+    renderSample.heading_deg = lerpAngle(
+      (renderSample.heading_deg || 0) * Math.PI / 180,
+      (target.heading_deg || 0) * Math.PI / 180,
+      a
+    ) * 180 / Math.PI;
+
+    renderSample.wing_phase_rad = target.wing_phase_rad;
+    renderSample.wing_frequency_hz = target.wing_frequency_hz;
+    renderSample.wing_left_amplitude = target.wing_left_amplitude;
+    renderSample.wing_right_amplitude = target.wing_right_amplitude;
+    renderSample.gait_phase_rad = target.gait_phase_rad;
+    renderSample.gait_frequency_hz = target.gait_frequency_hz;
+    renderSample.gait_duty_factor = target.gait_duty_factor;
+    renderSample.airborne = target.airborne;
+    return renderSample;
+  }
 
   const NativeWorker = window.Worker;
   if (NativeWorker) {
@@ -29,7 +70,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '2');
+          versioned.searchParams.set('v', '3');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -133,63 +174,119 @@
   function drawWing(side, size, phase, amplitude, alpha) {
     if (amplitude <= 0.01) return;
     const maxStroke = (metadata?.flight?.wing_stroke_amplitude_deg || 72) * Math.PI / 180;
-    const stroke = Math.sin(phase) * maxStroke * amplitude;
-    const baseX = side * size * 0.065, baseY = -size * 0.015;
-    ctx.save(); ctx.translate(baseX, baseY); ctx.rotate(side * (0.72 + stroke));
+    const stroke = Math.sin(phase) * maxStroke * 0.85 * amplitude;
+    const span = size * (0.28 + 0.04 * amplitude);
+    const chord = size * 0.16;
+
+    ctx.save();
+    ctx.translate(side * size * 0.055, -size * 0.03);
+    ctx.rotate(side * (0.70 + stroke));
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(225,232,224,.62)'; ctx.strokeStyle = 'rgba(88,87,73,.50)'; ctx.lineWidth = Math.max(0.7, size * 0.008);
-    ctx.beginPath(); ctx.moveTo(0, 0);
-    ctx.bezierCurveTo(side * size * 0.06, -size * 0.08, side * size * 0.22, -size * 0.19, side * size * 0.29, -size * 0.09);
-    ctx.bezierCurveTo(side * size * 0.27, size * 0.02, side * size * 0.11, size * 0.09, 0, 0);
-    ctx.fill(); ctx.stroke(); ctx.restore();
+
+    ctx.fillStyle = 'rgba(238,242,236,0.56)';
+    ctx.strokeStyle = 'rgba(110,102,88,0.42)';
+    ctx.lineWidth = Math.max(0.7, size * 0.006);
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(side * span * 0.22, -chord * 0.75,
+                      side * span * 0.95, -chord * 0.78,
+                      side * span, -chord * 0.08);
+    ctx.bezierCurveTo(side * span * 0.88, chord * 0.34,
+                      side * span * 0.30, chord * 0.28,
+                      0, 0);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(side * span * 0.68, -chord * 0.34);
+    ctx.moveTo(side * span * 0.16, -chord * 0.10);
+    ctx.lineTo(side * span * 0.74, 0);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function drawWings(sample, size) {
     const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
     if (!airborne) return;
+
     const phase = sample.wing_phase_rad || 0;
     const frequency = sample.wing_frequency_hz || 0;
     const leftAmp = sample.wing_left_amplitude ?? sample.wing_power ?? 0;
     const rightAmp = sample.wing_right_amplitude ?? sample.wing_power ?? 0;
+
     if (reducedMotion.matches || frequency <= 0) {
-      drawWing(-1, size, phase, leftAmp, 0.5); drawWing(1, size, phase, rightAmp, 0.5); return;
+      drawWing(-1, size, phase, leftAmp, 0.42);
+      drawWing(1, size, phase, rightAmp, 0.42);
+      return;
     }
-    const exposure = 1 / 120;
-    const ghosts = 5;
+
+    const exposure = 1 / 90;
+    const ghosts = 6;
     for (let i = ghosts - 1; i >= 0; --i) {
-      const pastPhase = phase - TAU * frequency * exposure * i / (ghosts - 1);
-      const alpha = i === 0 ? 0.52 : 0.06 + 0.12 * (1 - i / ghosts);
-      drawWing(-1, size, pastPhase, leftAmp, alpha); drawWing(1, size, pastPhase, rightAmp, alpha);
+      const p = phase - TAU * frequency * exposure * i / (ghosts - 1);
+      const a = i === 0 ? 0.34 : 0.05 + 0.07 * (1 - i / ghosts);
+      drawWing(-1, size, p, leftAmp, a);
+      drawWing(1, size, p, rightAmp, a);
     }
   }
 
   const LEG_LAYOUT = [
-    {side:-1, y:-0.13, phase:0}, {side:-1, y:0.00, phase:Math.PI}, {side:-1, y:0.14, phase:0},
-    {side:1, y:-0.13, phase:Math.PI}, {side:1, y:0.00, phase:0}, {side:1, y:0.14, phase:Math.PI},
+    {side:-1, hipX:0.05, hipY:-0.12, footX:0.23, footY:-0.10, phase:0},
+    {side:-1, hipX:0.06, hipY: 0.00, footX:0.24, footY: 0.02, phase:Math.PI},
+    {side:-1, hipX:0.05, hipY: 0.13, footX:0.21, footY: 0.14, phase:0},
+    {side: 1, hipX:0.05, hipY:-0.12, footX:0.23, footY:-0.10, phase:Math.PI},
+    {side: 1, hipX:0.06, hipY: 0.00, footX:0.24, footY: 0.02, phase:0},
+    {side: 1, hipX:0.05, hipY: 0.13, footX:0.21, footY: 0.14, phase:Math.PI},
   ];
 
   function drawLegs(sample, size) {
     const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
     const gaitPhase = sample.gait_phase_rad || 0;
-    const duty = Math.max(0.45, Math.min(0.8, sample.gait_duty_factor || 0.6));
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const duty = Math.max(0.5, Math.min(0.78, sample.gait_duty_factor || 0.62));
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
     for (const leg of LEG_LAYOUT) {
-      const phase = ((gaitPhase + leg.phase) % TAU + TAU) % TAU;
+      const phase = modulo(gaitPhase + leg.phase, TAU);
       const cycle = phase / TAU;
       const stance = !airborne && cycle < duty;
-      let sweep;
-      if (airborne) sweep = 0.12;
-      else if (stance) sweep = 0.16 - 0.32 * cycle / duty;
-      else sweep = -0.16 + 0.32 * (cycle - duty) / (1 - duty);
-      const lift = airborne ? 0.11 : (stance ? 0 : Math.sin(Math.PI * (cycle - duty) / (1 - duty)) * 0.10);
-      const hipX = leg.side * size * 0.055, hipY = leg.y * size;
-      const footX = leg.side * size * (airborne ? 0.19 : 0.31);
-      const footY = hipY + sweep * size;
-      const kneeX = leg.side * size * (airborne ? 0.13 : 0.18);
-      const kneeY = (hipY + footY) * 0.5 - lift * size;
-      ctx.strokeStyle = stance ? 'rgba(63,48,34,.90)' : 'rgba(76,57,39,.72)';
-      ctx.lineWidth = Math.max(1, size * 0.013);
-      ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(kneeX, kneeY); ctx.lineTo(footX, footY); ctx.stroke();
+
+      const hipX = leg.side * size * leg.hipX;
+      const hipY = size * leg.hipY;
+
+      let footX = leg.side * size * leg.footX;
+      let footY = size * leg.footY;
+      let lift = 0;
+
+      if (airborne) {
+        footX = leg.side * size * 0.15;
+        footY = hipY + size * 0.03;
+        lift = size * 0.02;
+      } else if (stance) {
+        const t = cycle / duty;
+        footX += leg.side * size * (0.025 - 0.05 * t);
+        footY += size * (0.004 - 0.008 * t);
+      } else {
+        const t = (cycle - duty) / (1 - duty);
+        footX += leg.side * size * (-0.025 + 0.05 * t);
+        footY += size * (0.006 - 0.012 * t);
+        lift = Math.sin(Math.PI * t) * size * 0.028;
+      }
+
+      const kneeX = hipX + (footX - hipX) * 0.52;
+      const kneeY = hipY + (footY - hipY) * 0.45 - size * 0.03 - lift;
+
+      ctx.strokeStyle = stance ? 'rgba(62,48,35,0.88)' : 'rgba(82,63,43,0.68)';
+      ctx.lineWidth = Math.max(0.85, size * 0.010);
+
+      ctx.beginPath();
+      ctx.moveTo(hipX, hipY);
+      ctx.lineTo(kneeX, kneeY);
+      ctx.lineTo(footX, footY);
+      ctx.stroke();
     }
   }
 
@@ -226,10 +323,16 @@
     const dimensions = fitCanvas(); ctx.clearRect(0, 0, dimensions.width, dimensions.height);
     if (!isLive() || !metadata || !latestSample) { overlay.hidden = true; return; }
     overlay.hidden = false;
-    const sample = projectedSample(timestamp); syncContact(sample); drawFly(sample, dimensions);
+    const dt = lastFrameAt ? Math.min(0.05, (timestamp - lastFrameAt) / 1000) : 0;
+    lastFrameAt = timestamp;
+    const projected = projectedSample(timestamp);
+    const sample = smoothSample(projected, dt);
+    syncContact(sample);
+    drawFly(sample, dimensions);
   }
 
   sessionSelect.addEventListener('change', () => {
+    renderSample = null;
     if (isLive()) { metadata = null; latestSample = null; } else overlay.hidden = true;
   });
   if ('ResizeObserver' in window) new ResizeObserver(fitCanvas).observe(stage);
