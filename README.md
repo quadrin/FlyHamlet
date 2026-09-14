@@ -50,6 +50,9 @@ has stopped ([Experiment 6](#experiment-6-two-letter-state-decoding)).
 The **[Chain lab](https://quadrin.github.io/FlyHamlet/chain.html)** gives the network one
 prompt and feeds its own decoded letters back as cues, with nothing stored outside
 its state ([Experiment 7](#experiment-7-self-driven-recall)).
+The **[Synapse lab](https://quadrin.github.io/FlyHamlet/synapse.html)** moves the learning
+inside the brain: only existing Kenyon-cell-to-MBON synapses change, and a fixed vote
+among MBON groups is the readout ([Experiment 8](#experiment-8-in-brain-memory)).
 
 Locally, run `python -m http.server` in the repository root and open `/index.html`.
 The viewer templates are `site/head.html` and `site/body.html`; styling and orchestration
@@ -555,7 +558,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_memory.cjs --seeds 42,43,44 --out results/memory_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs tests/test_mb_model.cjs tests/test_mb_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. With the
@@ -584,7 +587,7 @@ cue-visible separation, frozen fits, and unchanged connectivity arrays.
 
 Implementation: `site/memory-model.js` contains the assay; `site/memory-rewire.js`
 prepares and audits the control; `site/memory-worker.js` schedules computation;
-`site/memory.js` renders the observer interface. Build all six pages with
+`site/memory.js` renders the observer interface. Build all seven pages with
 `python scripts/build_site.py`.
 
 The design is motivated by [connectome reservoir memory tests and rewired controls](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/).
@@ -687,7 +690,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_sequence.cjs --seeds 42,43,44 --out results/sequence_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs tests/test_mb_model.cjs tests/test_mb_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. Under the
@@ -735,7 +738,7 @@ snapshots, frozen fits, and unchanged connectivity arrays.
 
 Implementation: `site/sequence-model.js` contains the assay and the slow-graph
 preparation; `site/sequence-worker.js` schedules computation; `site/sequence.js`
-renders the observer interface. Build all six pages with `python scripts/build_site.py`.
+renders the observer interface. Build all seven pages with `python scripts/build_site.py`.
 
 The design is motivated by the same [connectome reservoir framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/)
 as Experiment 5. Neither that work nor the underlying
@@ -812,7 +815,7 @@ Reproduce the development runs and checks with:
 
 ```bash
 node scripts/benchmark_chain.cjs --seeds 42,43,44 --out results/chain_benchmark
-node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs tests/test_mb_model.cjs tests/test_mb_worker.cjs
 ```
 
 Development runs used unchanged defaults with seeds **42, 43 and 44**. Under the
@@ -861,12 +864,111 @@ unchanged connectivity arrays.
 
 Implementation: `site/chain-model.js` contains the assay; `site/chain-worker.js`
 schedules computation; `site/chain.js` renders the observer interface. Build all
-six pages with `python scripts/build_site.py`.
+seven pages with `python scripts/build_site.py`.
 
 The design is motivated by the same [connectome reservoir framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC10803782/)
 as Experiments 5 and 6. Neither that work nor the underlying
 [sensorimotor LIF model](https://www.nature.com/articles/s41586-024-07763-9)
 validates the slower-dynamics parameters, this state readout, or self-driven recall.
+
+## Experiment 8: in-brain memory
+
+Open **[Synapse lab](https://quadrin.github.io/FlyHamlet/synapse.html)** and select
+**Run experiment**. Every earlier lab learned in an external readout. Here nothing
+outside the brain learns: letters arrive as sparse olfactory-style codes on the
+fly's own projection neurons, the only synapses that change are the existing
+Kenyon-cell-to-MBON connections of the mushroom body, and the readout is a fixed
+vote among MBON groups. During recall the winning letter is fed straight back as
+the next cue. Every session computes the full network. The default speed is 1×;
+the protocol simulates about **180 seconds** and less when episodes end early, with
+device-dependent wall time. Pause/resume, new seeds, and exports work as before.
+
+**Cells.** `scripts/export_mushroom_body.py` reads the public FlyWire v783 neurons
+and classification tables, verifies them against the hashes in
+`site/model/manifest.json`, maps root IDs to the browser model's dense indices,
+and writes `site/model/mushroom-body.json`: **5,177 Kenyon cells** (class
+`Kenyon_Cell`), **96 MBONs** (cell or hemibrain type starting with `MBON`) and
+**277 uniglomerular antennal-lobe projection neurons**. In the exported graph these
+cells are joined by 62,261 Kenyon-cell-to-MBON connection slots, all excitatory,
+and 26,075 projection-neuron-to-Kenyon-cell slots. No cell was hand-picked.
+
+**Why the visual cues could not be used.** The eye-cell codes of Experiments 4 to 7
+never make a Kenyon cell fire: they reach the mushroom body only three synapses
+away, and across a full phrase not one Kenyon cell spiked in either the original
+or the slower model. Projection-neuron codes do reach it, but the original weights
+saturate it: two thirds of all Kenyon cells fire for every letter, with the same
+cells regardless of letter or position. A weight scale of 0.1 leaves the mushroom
+body silent. A sweep found that time constants ×10 with weights ×**0.3** activate
+**3 to 9 percent** of Kenyon cells per letter, that different letters activate
+nearly disjoint sets, and that the same letter at a different phrase position
+activates a substantially different set. That regime is imposed by calibration,
+not measured, and it is the one used here.
+
+| Condition | Network within an episode | Kenyon-cell-to-MBON synapses | Warm-up |
+| --- | --- | --- | --- |
+| Plastic | One network, never reset | Learn during training, then frozen | First cue of each episode |
+| Plastic, reset | Replaced with rest at every cue onset | Learn during training, then frozen | Every cue, current letter only |
+| Frozen | One network, never reset | Never change | First cue of each episode |
+
+**Timing and readout.** Each cue drives its projection-neuron code at **100 Hz for
+100 ms**, then a **25 ms gap**. A resting network barely answers its first cue, so
+the first cue of every episode is presented for an extra **250 ms** before its
+counting window; the reset condition gets that same warm-up on every cue, with the
+current letter only, so its activity is comparable but carries no history. MBON
+spikes are counted over the final 125 ms. The 96 MBONs are partitioned once, by
+seed, into eight groups of twelve, one per output code; the decision is the group
+with the most spikes, with ties broken by the groups' mean quantized membrane
+voltage and then by group order. No parameter of the readout is learned.
+
+**What learns.** Twelve teacher-forced training episodes present START followed by
+the phrase. After each decision in which the target group was not the strict
+winner, every Kenyon cell that spiked in the window strengthens its synapses onto
+the target group by **1 mV per spike** and weakens its synapses onto the strongest
+rival group by the same amount, within **[0, 20] mV**. Only existing
+Kenyon-cell-to-MBON synapses change; the initial values are the rescaled
+anatomical weights. The teacher is external and supervised; it stands in for a
+dopamine signal but does not model one. Learning is then off for three
+teacher-forced diagnostic episodes and six autonomous recall episodes, in which
+the decoded letter becomes the next cue, END stops the episode, and a fixed cap of
+32 decisions is independent of the phrase length.
+
+**Controls and comparator.** The frozen condition shows what the fixed readout
+does on unchanged synapses. The reset condition shows what the same rule can learn
+from the current letter alone; a decoder fitted on the current cue with no memory
+produces `to be be be…` and reaches chain length 6, the ceiling for anything
+without history. A plastic chain beyond that ceiling means that position
+information carried in retained neural state was written into synapses the
+network already has.
+
+Reproduce the development runs and checks with:
+
+```bash
+python scripts/export_mushroom_body.py
+node scripts/benchmark_mb.cjs --seeds 42,43,44 --out results/mb_benchmark
+node --test tests/test_live_model.cjs tests/test_learning_model.cjs tests/test_learning_worker.cjs tests/test_recall_model.cjs tests/test_recall_worker.cjs tests/test_memory_model.cjs tests/test_memory_rewire.cjs tests/test_memory_worker.cjs tests/test_sequence_model.cjs tests/test_sequence_worker.cjs tests/test_chain_model.cjs tests/test_chain_worker.cjs tests/test_mb_model.cjs tests/test_mb_worker.cjs
+```
+
+MB_RESULTS_PLACEHOLDER
+
+The [benchmark report](results/mb_benchmark/report.md) links complete raw runs as
+gzip-compressed JSON, including initial and learned synaptic weights, every
+decision's MBON group counts and Kenyon-cell activity, and every autonomous
+output. The CLI rebuilds the plastic slot list from the graph, replays every
+synaptic update from the recorded activity to reproduce the learned weights
+exactly, confirms that the frozen control never changed and that learning
+happened only during training, reproduces every decision from the exported
+counts, and verifies own-feedback cues, paired episodes and unchanged
+connectivity arrays.
+
+Implementation: `site/mb-model.js` contains the assay; `site/mb-worker.js`
+schedules computation and loads the annotation; `site/mb.js` renders the
+observer interface. Build all seven pages with `python scripts/build_site.py`.
+
+The mushroom-body circuit and its dopamine-gated Kenyon-cell-to-MBON plasticity
+are described in [Aso et al. 2014](https://elifesciences.org/articles/04577) and
+[Hige et al. 2015](https://doi.org/10.1016/j.neuron.2015.11.003). This experiment
+borrows the anatomy and the locus of plasticity from that work; the imposed
+dynamics, the sparse letter codes and the supervised rule are not from it.
 
 ## Notes and caveats
 
