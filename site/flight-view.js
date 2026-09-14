@@ -25,8 +25,15 @@
   if (NativeWorker) {
     window.Worker = class FlyHamletObservedWorker extends NativeWorker {
       constructor(url, options) {
-        super(url, options);
-        if (String(url).includes('live-worker.js')) {
+        const liveWorker = String(url).includes('live-worker.js');
+        let workerURL = url;
+        if (liveWorker) {
+          const versioned = new URL(url, document.baseURI);
+          versioned.searchParams.set('v', '2');
+          workerURL = versioned;
+        }
+        super(workerURL, options);
+        if (liveWorker) {
           this.addEventListener('message', (event) => {
             const message = event.data || {};
             if (message.type === 'ready') {
@@ -147,9 +154,6 @@
     if (reducedMotion.matches || frequency <= 0) {
       drawWing(-1, size, phase, leftAmp, 0.5); drawWing(1, size, phase, rightAmp, 0.5); return;
     }
-    // A display cannot resolve ~200 Hz directly. Integrate several physical wing
-    // poses across one exposure; this is motion blur from the simulated oscillator,
-    // while the newest pose still shows its exact phase.
     const exposure = 1 / 120;
     const ghosts = 5;
     for (let i = ghosts - 1; i >= 0; --i) {
