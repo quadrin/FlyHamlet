@@ -56,14 +56,25 @@ test('giant-fiber takeoff spins a physical wing oscillator whose strokes create 
   assert.equal(arena.fly.wingFrequency, 0);
 });
 
-test('a silent brain leaves the fly standing still', () => {
-  const arena = new FlyArena(graph(), manifest(), 3);
-  const x0 = arena.fly.x, y0 = arena.fly.y;
-  for (let i = 0; i < 80; i++) arena.stepControl();
-  assert.equal(arena.fly.airborne, false);
-  assert.equal(arena.fly.gaitFrequency, 0, 'no descending drive means no stepping');
-  assert(Math.hypot(arena.fly.x - x0, arena.fly.y - y0) < 1e-6,
-    'the fly must not creep when the descending neurons are silent');
+test('the base speed is the engine, so zeroing it stops the fly dead', () => {
+  // Measured on the real connectome with ground_base_speed_mm_s at 0: every
+  // descending group sat at 0.00 Hz for 800 simulated seconds and the fly never
+  // moved. The descending neurons answer looming, looming needs a nearby wall,
+  // and only the base speed carries the fly to one. The knob exists, but the
+  // default has to stay null or the model deadlocks.
+  const frozen = manifest();
+  frozen.config.arena.flight.ground_base_speed_mm_s = 0;
+  const still = new FlyArena(graph(), frozen, 3);
+  const sx = still.fly.x, sy = still.fly.y;
+  for (let i = 0; i < 80; i++) still.stepControl();
+  assert(Math.hypot(still.fly.x - sx, still.fly.y - sy) < 1e-9,
+    'zero base speed must stop the creep');
+
+  const normal = new FlyArena(graph(), manifest(), 3);
+  const nx = normal.fly.x, ny = normal.fly.y;
+  for (let i = 0; i < 80; i++) normal.stepControl();
+  assert(Math.hypot(normal.fly.x - nx, normal.fly.y - ny) > 0.01,
+    'the default must keep the fly exploring, or it never reaches a wall to sense');
 });
 
 test('walking advances an alternating gait oscillator and ground traction moves the body', () => {

@@ -49,10 +49,14 @@
     gait_frequency_max_hz: 18,
     gait_duty_slow: 0.68,
     gait_duty_fast: 0.54,
-    // A quiet brain should leave the fly standing, not creeping. This overrides
-    // arena.motor.base_speed_mm_s for the live view only; the recorded
-    // experiments in flyhamlet/ keep their own value.
-    ground_base_speed_mm_s: 0,
+    /* Overrides arena.motor.base_speed_mm_s for the live view. Leave it null.
+     * A standing fly looks more realistic, but 0 freezes this model dead: the
+     * descending neurons only fire in response to looming, looming only appears
+     * when the fly approaches a wall, and it only approaches a wall because the
+     * base speed carries it there. Measured with 0: every descending group sat
+     * at 0.00 Hz for 800 simulated seconds and the fly never moved a micron.
+     * The base speed is the engine; the connectome is the steering. */
+    ground_base_speed_mm_s: null,
     // Real flies fly in straight runs broken by saccades: fast body turns of
     // tens of degrees in tens of milliseconds. Part of the turn demand still
     // steers continuously; the rest charges the next saccade.
