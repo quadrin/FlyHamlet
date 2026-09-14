@@ -698,7 +698,11 @@ accuracy peaked at **50.0–57.8%** at 100 ms, which is what last-letter-only re
 predicts. By 200 ms only **3–5** nonstimulated neurons were off rest on average, by
 at most 0.02 mV, and 8–10 of 64 snapshots were fully silent; the residual
 second-letter signal lives in a handful of late-relaxing cells, not in a
-distributed trace.
+distributed trace. That signal depends on the declared resolution: rerunning seed
+42 at **0.1 mV** (`--resolution 0.1`, saved under
+[`resolution-0.1mV`](results/sequence_benchmark/resolution-0.1mV/report.md)) left
+every 200 ms snapshot fully silent and both letters exactly at chance there, while
+the second letter still scored 98.4% at 25 ms and 90.6% at 100 ms.
 
 Under the **slower-dynamics hypothesis**, both letters were recovered from every
 snapshot: exact-pair accuracy was **100%, 98.4% and 100%** at 200 ms, with about
