@@ -25,6 +25,8 @@
     wing_rise_s: 0.020,
     wing_decay_s: 0.45,
     wing_turn_asymmetry: 0.22,
+    wing_force_response_s: 0.030,
+    wing_torque_response_s: 0.040,
     max_wing_accel_mm_s2: 21000,
     vertical_drag_s: 4.5,
     air_drag_s: 3.2,
@@ -56,6 +58,8 @@
       f.pitch = 0; f.roll = 0;
       f.wingDrive = 0; f.wingPhase = 0; f.wingFrequency = 0;
       f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
+      f.wingForce = 0;
+      f.wingTorque = 0;
       f.gaitPhase = 0; f.gaitFrequency = 0; f.gaitDuty = this.flightCfg.gait_duty_slow;
       f.airborne = false; f.takeoffArmed = true;
     }
@@ -79,6 +83,7 @@
       const gfDrive = clamp(gf / c.gf_full_scale_hz, 0, 1);
       const locomotorDrive = clamp((fwd + bwd) / c.motor_full_scale_hz, 0, 1);
       const targetDrive = f.airborne ? clamp(Math.max(gfDrive, 0.78 * locomotorDrive), 0, 1) : 0;
+
       const tau = targetDrive > f.wingDrive ? c.wing_rise_s : c.wing_decay_s;
       f.wingDrive += (targetDrive - f.wingDrive) * (1 - Math.exp(-dt / Math.max(1e-4, tau)));
       if (f.wingDrive < 1e-4) f.wingDrive = 0;
@@ -87,16 +92,21 @@
         ? c.wing_frequency_min_hz + (c.wing_frequency_max_hz - c.wing_frequency_min_hz) * f.wingDrive
         : 0;
       f.wingPhase = modulo(f.wingPhase + TAU * f.wingFrequency * dt, TAU);
+
       f.leftWingAmplitude = clamp(f.wingDrive * (1 - c.wing_turn_asymmetry * turnNorm), 0, 1);
       f.rightWingAmplitude = clamp(f.wingDrive * (1 + c.wing_turn_asymmetry * turnNorm), 0, 1);
 
-      const strokeVelocity = Math.abs(Math.cos(f.wingPhase));
       const frequencyScale = f.wingFrequency / c.wing_frequency_max_hz;
-      const leftForce = c.max_wing_accel_mm_s2 * f.leftWingAmplitude ** 2
-        * frequencyScale ** 2 * (0.30 + 0.70 * strokeVelocity ** 2);
-      const rightForce = c.max_wing_accel_mm_s2 * f.rightWingAmplitude ** 2
-        * frequencyScale ** 2 * (0.30 + 0.70 * strokeVelocity ** 2);
-      return {leftForce, rightForce, totalForce: 0.5 * (leftForce + rightForce)};
+      const meanAmp = 0.5 * (f.leftWingAmplitude + f.rightWingAmplitude);
+      const targetForce = c.max_wing_accel_mm_s2 * meanAmp * meanAmp * frequencyScale * frequencyScale;
+      const targetTorque = (f.rightWingAmplitude - f.leftWingAmplitude) * frequencyScale;
+
+      f.wingForce += (targetForce - f.wingForce)
+        * (1 - Math.exp(-dt / c.wing_force_response_s));
+      f.wingTorque += (targetTorque - f.wingTorque)
+        * (1 - Math.exp(-dt / c.wing_torque_response_s));
+
+      return {totalForce: f.wingForce, turnTorque: f.wingTorque};
     }
 
     updateFlight(dt, fwd, bwd, turnNorm, wing) {
@@ -117,9 +127,7 @@
       f.vy += (forwardWing * forwardY + lateralWing * lateralY - c.air_drag_s * f.vy) * dt;
       f.vz += (verticalWing - c.gravity_mm_s2 - c.vertical_drag_s * f.vz) * dt;
 
-      const wingImbalance = (wing.rightForce - wing.leftForce) /
-        Math.max(1, c.max_wing_accel_mm_s2);
-      f.omega += (c.yaw_accel_rad_s2 * wingImbalance - c.yaw_drag_s * f.omega) * dt;
+      f.omega += (c.yaw_accel_rad_s2 * wing.turnTorque - c.yaw_drag_s * f.omega) * dt;
       f.heading = modulo(f.heading + f.omega * dt + Math.PI, TAU) - Math.PI;
 
       const nx = f.x + f.vx * dt, ny = f.y + f.vy * dt;
@@ -140,6 +148,7 @@
           f.airborne = false;
           f.wingDrive = 0; f.wingFrequency = 0;
           f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
+          f.wingForce = 0; f.wingTorque = 0;
           f.roll *= 0.35; f.pitch *= 0.35;
         }
       }
@@ -180,6 +189,7 @@
       f.z = 0; f.vz = 0;
       f.wingDrive = 0; f.wingFrequency = 0;
       f.leftWingAmplitude = 0; f.rightWingAmplitude = 0;
+      f.wingForce = 0; f.wingTorque = 0;
       const settle = 1 - Math.exp(-c.attitude_response_s * dt);
       f.roll += (0 - f.roll) * settle; f.pitch += (0 - f.pitch) * settle;
       f.v = f.vx * Math.cos(f.heading) + f.vy * Math.sin(f.heading);

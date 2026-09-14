@@ -14,12 +14,85 @@
   if (!arena || !stage || !keyGrid || !sessionSelect) return;
 
   const TAU = 2 * Math.PI;
+  const modulo = (value, modulus) => ((value % modulus) + modulus) % modulus;
   const overscan = 64;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const scriptURL = document.currentScript?.src || new URL('site/flight-view.js', document.baseURI).href;
   const sprite = new Image();
   sprite.src = new URL('assets/fruit-fly.png', scriptURL).href;
+  const shadowSprite = new Image();
+  shadowSprite.src = new URL('assets/fly-shadow.png', scriptURL).href;
+  const wingSheet = new Image();
+  wingSheet.src = new URL('assets/fly-wings.png', scriptURL).href;
+  const ready = (image) => image.complete && image.naturalWidth > 0;
+
+  /* fly-wings.png holds 12 wing pairs, one wingbeat, read left to right along
+   * each row. Cell 0 is the top of the upstroke. The pairs are NOT on a uniform
+   * grid: the hinges sit at x = 283, 818, 1354 and 1878, and one pair crosses a
+   * uniform row boundary. So each cell carries its own source rect and its own
+   * hinge, measured by scripts/measure_wing_sheet.py. Re-run that script if the
+   * artwork changes.
+   *   [sx, sy, sw, sh, hingeX, hingeY] - hinge is relative to the rect.
+   */
+  const WING_CELLS = [
+    [173, 21, 220, 192, 110, 178],  //  0  gap 4px
+    [670, 22, 297, 191, 148, 177],  //  1  gap 9px
+    [1180, 44, 347, 169, 174, 155],  //  2  gap 8px
+    [1671, 68, 417, 144, 207, 128],  //  3  gap 5px
+    [49, 298, 471, 109, 234, 44],  //  4  gap 9px
+    [582, 311, 473, 117, 236, 24],  //  5  gap 11px
+    [1137, 309, 433, 136, 217, 20],  //  6  gap 11px
+    [1692, 305, 376, 162, 186, 22],  //  7  gap 7px
+    [111, 527, 347, 172, 172, 20],  //  8  gap 10px
+    [646, 510, 344, 156, 172, 144],  //  9  gap 6px
+    [1183, 487, 339, 179, 171, 166],  // 10  gap 14px
+    [1765, 467, 230, 199, 113, 186],  // 11  gap 5px
+  ];
+
+  const WING_SHEET_SCALE = 0.0030; // sheet pixel -> body size units
+  const WING_ANCHOR_Y = -0.06;      // wing root on the thorax, fraction of size
+  const SHADOW_SPRITE_GAIN = 1.7;    // the sprite is softer than the old gradient
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
+  let renderSample = null;
+  let lastFrameAt = 0;
+
+  function lerpAngle(a, b, t) {
+    let d = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
+    if (d < -Math.PI) d += Math.PI * 2;
+    return a + d * t;
+  }
+
+  function smoothSample(target, dt) {
+    if (!target) return null;
+    if (!renderSample) {
+      renderSample = {...target};
+      return renderSample;
+    }
+    const a = 1 - Math.exp(-dt / 0.045);
+    renderSample.x += (target.x - renderSample.x) * a;
+    renderSample.y += (target.y - renderSample.y) * a;
+    renderSample.z_mm += ((target.z_mm || 0) - (renderSample.z_mm || 0)) * a;
+    renderSample.vx_mm_s += ((target.vx_mm_s || 0) - (renderSample.vx_mm_s || 0)) * a;
+    renderSample.vy_mm_s += ((target.vy_mm_s || 0) - (renderSample.vy_mm_s || 0)) * a;
+    renderSample.vz_mm_s += ((target.vz_mm_s || 0) - (renderSample.vz_mm_s || 0)) * a;
+    renderSample.pitch_deg += ((target.pitch_deg || 0) - (renderSample.pitch_deg || 0)) * a;
+    renderSample.roll_deg += ((target.roll_deg || 0) - (renderSample.roll_deg || 0)) * a;
+    renderSample.heading_deg = lerpAngle(
+      (renderSample.heading_deg || 0) * Math.PI / 180,
+      (target.heading_deg || 0) * Math.PI / 180,
+      a
+    ) * 180 / Math.PI;
+
+    renderSample.wing_phase_rad = target.wing_phase_rad;
+    renderSample.wing_frequency_hz = target.wing_frequency_hz;
+    renderSample.wing_left_amplitude = target.wing_left_amplitude;
+    renderSample.wing_right_amplitude = target.wing_right_amplitude;
+    renderSample.gait_phase_rad = target.gait_phase_rad;
+    renderSample.gait_frequency_hz = target.gait_frequency_hz;
+    renderSample.gait_duty_factor = target.gait_duty_factor;
+    renderSample.airborne = target.airborne;
+    return renderSample;
+  }
 
   const NativeWorker = window.Worker;
   if (NativeWorker) {
@@ -29,7 +102,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '2');
+          versioned.searchParams.set('v', '7');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -125,71 +198,63 @@
     const radius = size * (0.28 + 0.18 * altitudeFraction);
     ctx.save(); ctx.translate(x + size * 0.09 * altitudeFraction, y + size * 0.12 * altitudeFraction);
     ctx.rotate(Math.PI / 2 - heading); ctx.scale(1.35 + altitudeFraction * 0.45, 0.58 + altitudeFraction * 0.12);
-    const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
-    shadow.addColorStop(0, `rgba(35,25,12,${alpha})`); shadow.addColorStop(0.48, `rgba(35,25,12,${alpha * 0.55})`); shadow.addColorStop(1, 'rgba(35,25,12,0)');
-    ctx.fillStyle = shadow; ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill(); ctx.restore();
+    if (ready(shadowSprite)) {
+      ctx.globalAlpha = Math.min(1, alpha * SHADOW_SPRITE_GAIN);
+      ctx.drawImage(shadowSprite, -radius, -radius, radius * 2, radius * 2);
+    } else {
+      const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+      shadow.addColorStop(0, `rgba(35,25,12,${alpha})`); shadow.addColorStop(0.48, `rgba(35,25,12,${alpha * 0.55})`); shadow.addColorStop(1, 'rgba(35,25,12,0)');
+      ctx.fillStyle = shadow; ctx.beginPath(); ctx.arc(0, 0, radius, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
   }
 
-  function drawWing(side, size, phase, amplitude, alpha) {
+  function drawWingSprite(side, size, phase, amplitude, alpha) {
     if (amplitude <= 0.01) return;
-    const maxStroke = (metadata?.flight?.wing_stroke_amplitude_deg || 72) * Math.PI / 180;
-    const stroke = Math.sin(phase) * maxStroke * amplitude;
-    const baseX = side * size * 0.065, baseY = -size * 0.015;
-    ctx.save(); ctx.translate(baseX, baseY); ctx.rotate(side * (0.72 + stroke));
+    const cell = WING_CELLS[Math.min(WING_CELLS.length - 1,
+      Math.floor(modulo(phase, TAU) / TAU * WING_CELLS.length))];
+    const [sx, sy, sw, sh, hingeX, hingeY] = cell;
+
+    const scale = size * WING_SHEET_SCALE * (0.92 + 0.08 * amplitude);
+    const rootY = WING_ANCHOR_Y * size;
+
+    ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = 'rgba(225,232,224,.62)'; ctx.strokeStyle = 'rgba(88,87,73,.50)'; ctx.lineWidth = Math.max(0.7, size * 0.008);
-    ctx.beginPath(); ctx.moveTo(0, 0);
-    ctx.bezierCurveTo(side * size * 0.06, -size * 0.08, side * size * 0.22, -size * 0.19, side * size * 0.29, -size * 0.09);
-    ctx.bezierCurveTo(side * size * 0.27, size * 0.02, side * size * 0.11, size * 0.09, 0, 0);
-    ctx.fill(); ctx.stroke(); ctx.restore();
+    // Clip on the hinge, so each half carries one wing. The pair is drawn with
+    // its hinge on the body's wing root, so the hinge is the local origin.
+    ctx.beginPath();
+    ctx.rect(side < 0 ? -size * 2 : 0, -size * 2, size * 2, size * 4);
+    ctx.clip();
+    ctx.drawImage(wingSheet, sx, sy, sw, sh,
+      -hingeX * scale, rootY - hingeY * scale, sw * scale, sh * scale);
+    ctx.restore();
   }
 
   function drawWings(sample, size) {
+    // The body sprite already carries a pair of wings. Animate a second pair
+    // only when fly-wings.png is available, so the fly never grows four wings.
+    if (!ready(wingSheet)) return;
     const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
     if (!airborne) return;
+
     const phase = sample.wing_phase_rad || 0;
     const frequency = sample.wing_frequency_hz || 0;
     const leftAmp = sample.wing_left_amplitude ?? sample.wing_power ?? 0;
     const rightAmp = sample.wing_right_amplitude ?? sample.wing_power ?? 0;
+
     if (reducedMotion.matches || frequency <= 0) {
-      drawWing(-1, size, phase, leftAmp, 0.5); drawWing(1, size, phase, rightAmp, 0.5); return;
+      drawWingSprite(-1, size, phase, leftAmp, 0.42);
+      drawWingSprite(1, size, phase, rightAmp, 0.42);
+      return;
     }
-    const exposure = 1 / 120;
-    const ghosts = 5;
+
+    const exposure = 1 / 90;
+    const ghosts = 6;
     for (let i = ghosts - 1; i >= 0; --i) {
-      const pastPhase = phase - TAU * frequency * exposure * i / (ghosts - 1);
-      const alpha = i === 0 ? 0.52 : 0.06 + 0.12 * (1 - i / ghosts);
-      drawWing(-1, size, pastPhase, leftAmp, alpha); drawWing(1, size, pastPhase, rightAmp, alpha);
-    }
-  }
-
-  const LEG_LAYOUT = [
-    {side:-1, y:-0.13, phase:0}, {side:-1, y:0.00, phase:Math.PI}, {side:-1, y:0.14, phase:0},
-    {side:1, y:-0.13, phase:Math.PI}, {side:1, y:0.00, phase:0}, {side:1, y:0.14, phase:Math.PI},
-  ];
-
-  function drawLegs(sample, size) {
-    const airborne = Boolean(sample.airborne) || (sample.z_mm || 0) > 0.03;
-    const gaitPhase = sample.gait_phase_rad || 0;
-    const duty = Math.max(0.45, Math.min(0.8, sample.gait_duty_factor || 0.6));
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const leg of LEG_LAYOUT) {
-      const phase = ((gaitPhase + leg.phase) % TAU + TAU) % TAU;
-      const cycle = phase / TAU;
-      const stance = !airborne && cycle < duty;
-      let sweep;
-      if (airborne) sweep = 0.12;
-      else if (stance) sweep = 0.16 - 0.32 * cycle / duty;
-      else sweep = -0.16 + 0.32 * (cycle - duty) / (1 - duty);
-      const lift = airborne ? 0.11 : (stance ? 0 : Math.sin(Math.PI * (cycle - duty) / (1 - duty)) * 0.10);
-      const hipX = leg.side * size * 0.055, hipY = leg.y * size;
-      const footX = leg.side * size * (airborne ? 0.19 : 0.31);
-      const footY = hipY + sweep * size;
-      const kneeX = leg.side * size * (airborne ? 0.13 : 0.18);
-      const kneeY = (hipY + footY) * 0.5 - lift * size;
-      ctx.strokeStyle = stance ? 'rgba(63,48,34,.90)' : 'rgba(76,57,39,.72)';
-      ctx.lineWidth = Math.max(1, size * 0.013);
-      ctx.beginPath(); ctx.moveTo(hipX, hipY); ctx.lineTo(kneeX, kneeY); ctx.lineTo(footX, footY); ctx.stroke();
+      const p = phase - TAU * frequency * exposure * i / (ghosts - 1);
+      const a = i === 0 ? 0.34 : 0.05 + 0.07 * (1 - i / ghosts);
+      drawWingSprite(-1, size, p, leftAmp, a);
+      drawWingSprite(1, size, p, rightAmp, a);
     }
   }
 
@@ -213,7 +278,7 @@
 
     ctx.save(); ctx.translate(bodyX, bodyY); ctx.rotate(Math.PI / 2 - heading);
     ctx.scale(Math.max(0.56, Math.cos(roll)) * scale, Math.max(0.62, Math.cos(pitch)) * scale);
-    drawWings(sample, size); drawLegs(sample, size);
+    drawWings(sample, size);
     if (sprite.complete && sprite.naturalWidth > 0) {
       const sh = size * sprite.naturalHeight / sprite.naturalWidth;
       ctx.drawImage(sprite, -size / 2, -sh / 2, size, sh);
@@ -226,10 +291,16 @@
     const dimensions = fitCanvas(); ctx.clearRect(0, 0, dimensions.width, dimensions.height);
     if (!isLive() || !metadata || !latestSample) { overlay.hidden = true; return; }
     overlay.hidden = false;
-    const sample = projectedSample(timestamp); syncContact(sample); drawFly(sample, dimensions);
+    const dt = lastFrameAt ? Math.min(0.05, (timestamp - lastFrameAt) / 1000) : 0;
+    lastFrameAt = timestamp;
+    const projected = projectedSample(timestamp);
+    const sample = smoothSample(projected, dt);
+    syncContact(sample);
+    drawFly(sample, dimensions);
   }
 
   sessionSelect.addEventListener('change', () => {
+    renderSample = null;
     if (isLive()) { metadata = null; latestSample = null; } else overlay.hidden = true;
   });
   if ('ResizeObserver' in window) new ResizeObserver(fitCanvas).observe(stage);
