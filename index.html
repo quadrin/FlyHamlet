@@ -82,14 +82,14 @@
       <summary><span class="methods-label"><span class="panel-number">03</span> Experiment notes &amp; methods</span><span class="disclosure-mark" aria-hidden="true">+</span></summary>
       <div class="notes-body">
         <p>The live session computes a fresh run of the full FlyWire v783 connectome: 139,255 neurons and 15,091,983 connected pairs. Neurons use the repository’s leaky integrate-and-fire model at 0.1 ms steps. Letters are assigned to the 90 × 30 mm arena’s 3 × 9 grid by a seeded permutation. Saved 300-second recordings remain available in the session menu.</p>
-        <p>The brain model supplies continuous descending-neuron motor commands. DNa02 + DNa01 set yaw, DNp09 and MDN set horizontal thrust, and giant-fiber activity can initiate an escape takeoff. A deterministic downstream plant represents the VNC, muscles and aerodynamics missing from the brain connectome: inertia, lift, gravity, drag, banking, pitch, wall contact and landing. It never selects a key or destination.</p>
-        <p>Randomness comes from the injected Poisson sensory inputs. The connectome turns that activity into motor output; the same motor output drives x, y and z. A key is typed only on keyboard contact, so flying across a key does not type it. The renderer projects simulated altitude and attitude, with altitude-dependent shadow and wing blur; those visual effects do not alter the trajectory.</p>
+        <p>The brain model supplies descending-neuron motor commands. Giant-fiber escape activity can start the downstream wing motor; an asynchronous 175–225 Hz wing oscillator then generates repeated strokes, and stroke velocity produces the lift and thrust that change x, y and z. DNa02 + DNa01 bias left/right wing force for turning. On the keyboard, DNp09/MDN locomotor drive sets an alternating modified-tripod leg oscillator; stance legs generate ground traction while swing legs reposition. The downstream plant represents VNC, muscle and body mechanics missing from the brain connectome and never selects a key or destination.</p>
+        <p>Randomness comes from injected Poisson sensory inputs. The connectome turns that activity into motor commands; deterministic wing and leg mechanics turn those commands into movement. A key is typed only on keyboard contact. The renderer uses the simulated wing phase, gait phase, altitude and attitude directly, including exposure-style wing blur at flight frequencies too fast for a display to resolve frame by frame.</p>
       </div>
     </details>
   </main>
   <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> 139,255 neurons. A new session every time.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
 </div>
 <noscript><p class="no-script">Enable JavaScript to run the live simulator or watch saved recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
-<script src="site/flight-view.js?v=1" defer></script>
+<script src="site/flight-view.js?v=2" defer></script>
 <script src="site/replay.js?v=workstation-1" defer></script>
 </body></html>
