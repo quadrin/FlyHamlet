@@ -51,6 +51,7 @@
 
   const WING_SHEET_SCALE = 0.0030; // sheet pixel -> body size units
   const WING_ANCHOR_Y = -0.06;      // wing root on the thorax, fraction of size
+  const WING_BLUR_ALPHA = 0.11;     // opacity of one stroke in the blur
   const SHADOW_SPRITE_GAIN = 1.7;    // the sprite is softer than the old gradient
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
   let renderSample = null;
@@ -102,7 +103,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '7');
+          versioned.searchParams.set('v', '8');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -248,13 +249,16 @@
       return;
     }
 
-    const exposure = 1 / 90;
-    const ghosts = 6;
-    for (let i = ghosts - 1; i >= 0; --i) {
-      const p = phase - TAU * frequency * exposure * i / (ghosts - 1);
-      const a = i === 0 ? 0.34 : 0.05 + 0.07 * (1 - i / ghosts);
-      drawWingSprite(-1, size, p, leftAmp, a);
-      drawWingSprite(1, size, p, rightAmp, a);
+    /* A 175-225 Hz wingbeat cannot be shown on a 60 Hz display. The phase moves
+     * more than three full strokes between frames, so a short trail lands on
+     * unrelated cells each frame and the wings flicker. What the eye gets from
+     * a real fly is the blur of a whole stroke, so draw that: one sample per
+     * cell, at fixed phases. The set is the same every frame, so the blur holds
+     * still while the body moves. */
+    for (let i = 0; i < WING_CELLS.length; ++i) {
+      const p = TAU * (i + 0.5) / WING_CELLS.length;
+      drawWingSprite(-1, size, p, leftAmp, WING_BLUR_ALPHA);
+      drawWingSprite(1, size, p, rightAmp, WING_BLUR_ALPHA);
     }
   }
 

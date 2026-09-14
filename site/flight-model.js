@@ -27,7 +27,10 @@
     wing_turn_asymmetry: 0.22,
     wing_force_response_s: 0.030,
     wing_torque_response_s: 0.040,
-    max_wing_accel_mm_s2: 21000,
+    // The old per-stroke term (0.30 + 0.70 cos^2) averaged 0.65 over a cycle.
+    // The cycle-averaged force has no such term, so carry the 0.65 here and
+    // keep the lift the model was tuned around: 21000 * 0.65 = 13650.
+    max_wing_accel_mm_s2: 13650,
     vertical_drag_s: 4.5,
     air_drag_s: 3.2,
     yaw_accel_rad_s2: 180,
