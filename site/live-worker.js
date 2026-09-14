@@ -2,7 +2,7 @@
  * The immutable full connectome is loaded once; each new session gets fresh state.
  */
 'use strict';
-importScripts('live-model.js', 'flight-model.js');
+importScripts('live-model.js', 'flight-model.js?v=2');
 
 let connectome = null;
 let manifest = null;
@@ -28,8 +28,6 @@ const now = () => performance.now();
 const newSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
 const emit = message => postMessage({seed: requestedSeed, generation: revision, ...message});
 const progress = (message, loaded = 0, total = 0) => emit({type: 'progress', message, loaded, total});
-// MessageChannel yields to incoming worker messages without the nested-timer
-// minimum delay, so the neural solver can use the available CPU when behind.
 const tickChannel = typeof MessageChannel === 'undefined' ? null : new MessageChannel();
 if (tickChannel) tickChannel.port1.onmessage = event => {
   if (event.data === scheduleTicket) tick();
@@ -59,7 +57,6 @@ async function fetchArray(url, name, integrity) {
   } else { bytes = new Uint8Array(await response.arrayBuffer()); loaded = bytes.byteLength; }
   progress(`Expanding ${name}`, loaded, total);
   let buffer = bytes.buffer;
-  // Detect gzip bytes: this also works when an HTTP server already decompressed.
   if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
     if (typeof DecompressionStream === 'undefined')
       throw new Error('This browser cannot expand the connectome. Please use a current Chrome, Edge, Firefox, or Safari.');
@@ -83,7 +80,6 @@ async function loadConnectome(manifestURL) {
   const data = await response.json();
   if (data.format !== 'flyhamlet-csr-v1') throw new Error('Unsupported live connectome format.');
   const arrays = {};
-  // Sequential expansion bounds peak temporary memory on phones and laptops.
   for (const name of ['indptr', 'indices', 'weights']) {
     const file = data.files[name];
     const path = typeof file === 'string' ? file : file.url;
@@ -93,7 +89,6 @@ async function loadConnectome(manifestURL) {
   if (arrays.indptr.length !== data.n + 1 || arrays.indices.length !== data.edgeCount ||
       arrays.weights.length !== data.edgeCount || arrays.indptr[data.n] !== data.edgeCount)
     throw new Error('The full connectome data is incomplete.');
-  // Reject bad indices before entering the integration loop.
   for (let i = 0; i < data.n; ++i) if (arrays.indptr[i] > arrays.indptr[i + 1])
     throw new Error('Invalid connectome row offsets.');
   for (const index of arrays.indices) if (index >= data.n) throw new Error('Invalid connectome target index.');
@@ -147,8 +142,6 @@ function tick() {
     const started = now();
     const target = paceSim + (started - paceWall) * speed / 1000;
     const controlSeconds = arena.controlSteps * arena.net.dt * 1e-3;
-    // Each slice is bounded in wall time; a control step is the smallest atomic
-    // interval. The worker yields between slices so Pause and New stay responsive.
     while (arena.net.timeS + controlSeconds <= target + 1e-12 && now() - started < 12) {
       const result = arena.stepControl();
       if (result.sample) pendingSamples.push(result.sample);
