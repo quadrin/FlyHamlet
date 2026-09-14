@@ -51,7 +51,7 @@
           <div id="typed" class="typed" tabindex="0" role="region" aria-label="Typed manuscript; scroll to read earlier keystrokes"><span class="cursor"></span></div>
           <div class="paper-footer"><span><b id="typed-count">0</b> keystrokes</span><span id="recording-total" hidden>of <b id="f-keys">—</b></span></div>
         </div>
-        <p class="manuscript-note">A letter is typed each time the fly enters a new key region.</p>
+        <p class="manuscript-note">A letter is typed when the fly enters a new key region while in contact with the keyboard.</p>
       </section>
     </div>
     <p id="session-note" class="session-note">New session resets the brain and starts with a fresh random seed. Speed depends on your device.</p>
@@ -62,7 +62,7 @@
         <div class="ro right"><span class="readout-label">Right eye</span><b id="r-loomR">0.0 Hz</b><small>Looming input</small></div>
         <div class="ro left"><span class="readout-label">Left turn</span><b id="r-dnL">0.0 Hz</b><small>DNa02 + DNa01</small></div>
         <div class="ro right"><span class="readout-label">Right turn</span><b id="r-dnR">0.0 Hz</b><small>DNa02 + DNa01</small></div>
-        <div class="ro gf"><span class="readout-label">Giant fiber</span><b id="r-gf">0.0 Hz</b><small>Escape signal</small></div>
+        <div class="ro gf"><span class="readout-label">Giant fiber</span><b id="r-gf">0.0 Hz</b><small>Escape / takeoff drive</small></div>
         <div class="ro motion"><span class="readout-label">Speed · turn</span><b id="r-motion">8.0 mm/s · 0°/s</b><small>Decoded motion</small></div>
       </div>
       <div class="oscilloscope">
@@ -75,12 +75,13 @@
       <summary><span class="methods-label"><span class="panel-number">03</span> Experiment notes &amp; methods</span><span class="disclosure-mark" aria-hidden="true">+</span></summary>
       <div class="notes-body">
         <p>The live session computes a fresh run of the full FlyWire v783 connectome: 139,255 neurons and 15,091,983 connected pairs. Neurons use the repository’s leaky integrate-and-fire model at 0.1 ms steps. Letters are assigned to the 90 × 30 mm arena’s 3 × 9 grid by a seeded permutation. Saved 300-second recordings remain available in the session menu.</p>
-        <p>The fly walks at a base speed of 8 mm/s. Nearby walls send proximity-scaled Poisson input to the eye’s LC4 + LPLC2 looming detectors; the network drives turning neurons on the opposite side, steering the fly away. Turning rates use a 50 ms window. The giant-fiber escape signal is recorded but does not control walking.</p>
-        <p>Randomness comes from the injected Poisson inputs. The brain’s wiring shapes that noise. Each live session uses a fresh random seed; its path and keystrokes are computed as it runs. The browser uses its own seeded random-number generator, so its seed values do not reproduce the Python recordings. The hovering artwork depicts the model’s walking trajectory and is enlarged for visibility.</p>
+        <p>The brain model supplies continuous descending-neuron motor commands. DNa02 + DNa01 set yaw, DNp09 and MDN set horizontal thrust, and giant-fiber activity can initiate an escape takeoff. A deterministic downstream plant represents the VNC, muscles and aerodynamics missing from the brain connectome: inertia, lift, gravity, drag, banking, pitch, wall contact and landing. It never selects a key or destination.</p>
+        <p>Randomness comes from the injected Poisson sensory inputs. The connectome turns that activity into motor output; the same motor output drives x, y and z. A key is typed only on keyboard contact, so flying across a key does not type it. The renderer projects simulated altitude and attitude, with altitude-dependent shadow and wing blur; those visual effects do not alter the trajectory.</p>
       </div>
     </details>
   </main>
   <footer class="site-footer"><span>FlyHamlet <span class="caption-divider">/</span> 139,255 neurons. A new session every time.</span><a href="https://github.com/quadrin/FlyHamlet#experiment-1-typing-entropy">Read the findings <span aria-hidden="true">↗</span></a></footer>
 </div>
 <noscript><p class="no-script">Enable JavaScript to run the live simulator or watch saved recordings. <a href="https://github.com/quadrin/FlyHamlet#readme">Read the experiment and results on GitHub.</a></p></noscript>
+<script src="site/flight-view.js?v=1" defer></script>
 <script src="site/replay.js?v=workstation-1" defer></script>
