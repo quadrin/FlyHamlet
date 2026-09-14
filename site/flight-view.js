@@ -26,15 +26,31 @@
   wingSheet.src = new URL('assets/fly-wings.png', scriptURL).href;
   const ready = (image) => image.complete && image.naturalWidth > 0;
 
-  /* fly-wings.png is a 4 x 3 grid of wing pairs. The 12 cells are one wingbeat,
-   * read left to right along each row. Cell 0 is the top of the upstroke.
-   * Each cell holds both wings, head up, so a cell is clipped to one half to
-   * give the left and right wing their own stroke phase. */
-  const WING_SHEET_COLS = 4;
-  const WING_SHEET_ROWS = 3;
-  const WING_SHEET_FRAMES = WING_SHEET_COLS * WING_SHEET_ROWS;
-  const WING_SHEET_SPAN = 0.86;      // pair width, as a fraction of the body size
-  const WING_SHEET_ANCHOR_Y = -0.05; // hinge height on the thorax, fraction of size
+  /* fly-wings.png holds 12 wing pairs, one wingbeat, read left to right along
+   * each row. Cell 0 is the top of the upstroke. The pairs are NOT on a uniform
+   * grid: the hinges sit at x = 283, 818, 1354 and 1878, and one pair crosses a
+   * uniform row boundary. So each cell carries its own source rect and its own
+   * hinge, measured by scripts/measure_wing_sheet.py. Re-run that script if the
+   * artwork changes.
+   *   [sx, sy, sw, sh, hingeX, hingeY] - hinge is relative to the rect.
+   */
+  const WING_CELLS = [
+    [173, 21, 220, 192, 110, 178],  //  0  gap 4px
+    [670, 22, 297, 191, 148, 177],  //  1  gap 9px
+    [1180, 44, 347, 169, 174, 155],  //  2  gap 8px
+    [1671, 68, 417, 144, 207, 128],  //  3  gap 5px
+    [49, 298, 471, 109, 234, 44],  //  4  gap 9px
+    [582, 311, 473, 117, 236, 24],  //  5  gap 11px
+    [1137, 309, 433, 136, 217, 20],  //  6  gap 11px
+    [1692, 305, 376, 162, 186, 22],  //  7  gap 7px
+    [111, 527, 347, 172, 172, 20],  //  8  gap 10px
+    [646, 510, 344, 156, 172, 144],  //  9  gap 6px
+    [1183, 487, 339, 179, 171, 166],  // 10  gap 14px
+    [1765, 467, 230, 199, 113, 186],  // 11  gap 5px
+  ];
+
+  const WING_SHEET_SCALE = 0.0030; // sheet pixel -> body size units
+  const WING_ANCHOR_Y = -0.06;      // wing root on the thorax, fraction of size
   const SHADOW_SPRITE_GAIN = 1.7;    // the sprite is softer than the old gradient
   let metadata = null, latestSample = null, sampleReceivedAt = 0;
   let renderSample = null;
@@ -86,7 +102,7 @@
         let workerURL = url;
         if (liveWorker) {
           const versioned = new URL(url, document.baseURI);
-          versioned.searchParams.set('v', '6');
+          versioned.searchParams.set('v', '7');
           workerURL = versioned;
         }
         super(workerURL, options);
@@ -195,23 +211,22 @@
 
   function drawWingSprite(side, size, phase, amplitude, alpha) {
     if (amplitude <= 0.01) return;
-    const cellW = wingSheet.naturalWidth / WING_SHEET_COLS;
-    const cellH = wingSheet.naturalHeight / WING_SHEET_ROWS;
-    const frame = Math.min(WING_SHEET_FRAMES - 1,
-      Math.floor(modulo(phase, TAU) / TAU * WING_SHEET_FRAMES));
-    const sx = (frame % WING_SHEET_COLS) * cellW;
-    const sy = Math.floor(frame / WING_SHEET_COLS) * cellH;
+    const cell = WING_CELLS[Math.min(WING_CELLS.length - 1,
+      Math.floor(modulo(phase, TAU) / TAU * WING_CELLS.length))];
+    const [sx, sy, sw, sh, hingeX, hingeY] = cell;
 
-    const drawW = size * WING_SHEET_SPAN * (0.92 + 0.08 * amplitude);
-    const drawH = drawW * cellH / cellW;
-    const top = WING_SHEET_ANCHOR_Y * size - drawH / 2;
+    const scale = size * WING_SHEET_SCALE * (0.92 + 0.08 * amplitude);
+    const rootY = WING_ANCHOR_Y * size;
 
     ctx.save();
     ctx.globalAlpha = alpha;
+    // Clip on the hinge, so each half carries one wing. The pair is drawn with
+    // its hinge on the body's wing root, so the hinge is the local origin.
     ctx.beginPath();
-    ctx.rect(side < 0 ? -drawW : 0, top - drawH, drawW, drawH * 3);
+    ctx.rect(side < 0 ? -size * 2 : 0, -size * 2, size * 2, size * 4);
     ctx.clip();
-    ctx.drawImage(wingSheet, sx, sy, cellW, cellH, -drawW / 2, top, drawW, drawH);
+    ctx.drawImage(wingSheet, sx, sy, sw, sh,
+      -hingeX * scale, rootY - hingeY * scale, sw * scale, sh * scale);
     ctx.restore();
   }
 

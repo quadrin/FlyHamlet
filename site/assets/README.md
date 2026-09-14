@@ -38,14 +38,30 @@ Tune the strength with `SHADOW_SPRITE_GAIN` in `site/flight-view.js`.
 
 ## `fly-wings.png` — wingbeat sheet
 
-Transparent PNG. A 4 x 3 grid of equal cells, so 12 cells in total. Every cell
-holds **both** wings, head up, with the hinges at the centre of the cell. The
-12 cells are one complete wingbeat, read left to right along row 1, then row 2,
-then row 3. Cell 0, at the top left, is the top of the upstroke.
+Transparent PNG. 12 wing pairs in 4 columns and 3 rows. Every cell holds
+**both** wings, head up. The 12 cells are one complete wingbeat, read left to
+right along row 1, then row 2, then row 3. Cell 0, at the top left, is the top
+of the upstroke.
 
-The renderer clips each cell to one half, so the left and right wing can hold
-different stroke phases while the fly turns. Keep the hinges on the cell centre
-line, or the two halves will not meet.
+The cells are **not** on a uniform grid. In the current artwork the hinges sit
+at x = 283, 818, 1354 and 1878, which a 4-column cut would put at 271.5, 814.5,
+1357.5 and 1900.5. One pair also crosses a uniform row boundary. So the renderer
+does not divide the sheet. It holds a table of 12 source rectangles, each with
+its own hinge, in the `WING_CELLS` constant in `site/flight-view.js`.
 
-Geometry lives in `site/flight-view.js`: `WING_SHEET_COLS`, `WING_SHEET_ROWS`,
-`WING_SHEET_SPAN` and `WING_SHEET_ANCHOR_Y`.
+**If you change this image, regenerate the table:**
+
+    python3 scripts/measure_wing_sheet.py > /tmp/cells.js
+
+Paste the result over `WING_CELLS`. The script finds each pair by its alpha
+bounding box, then finds the hinge as the row where the two wings come closest
+together. Check the `COLUMN_HINGES`, `COLUMN_BANDS` and `ROW_BANDS` constants at
+the top of the script if the layout moves.
+
+The renderer puts the hinge on the body's wing root and clips there, so the left
+and right wing can hold different stroke phases while the fly turns.
+
+Two other constants in `site/flight-view.js` set the fit: `WING_SHEET_SCALE`
+(sheet pixel to body size; 0.0030 makes a wing about as long as the body) and
+`WING_ANCHOR_Y` (the wing root on the thorax, -0.06 of the body size above
+centre).
