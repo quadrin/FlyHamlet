@@ -39,7 +39,7 @@
     gait_frequency_max_hz: 18,
     gait_duty_slow: 0.68,
     gait_duty_fast: 0.54,
-    ground_accel_mm_s2: 260,
+    ground_accel_mm_s2: 600,
     ground_drag_s: 18,
     ground_yaw_accel_rad_s2: 150,
     ground_yaw_drag_s: 12,
@@ -136,9 +136,6 @@
       }
       if (f.z <= 0 && f.vz <= 0) {
         f.z = 0; f.vz = 0;
-        // During takeoff the asynchronous wing motor may need several strokes to
-        // build enough force. Stay in flight mode while the wings are strongly
-        // driven; settle into contact only after aerodynamic support has faded.
         if (f.wingDrive < 0.32 && wing.totalForce < c.gravity_mm_s2 * 0.75) {
           f.airborne = false;
           f.wingDrive = 0; f.wingFrequency = 0;
@@ -211,7 +208,7 @@
       if (!f.takeoffArmed && gf <= c.gf_reset_hz) f.takeoffArmed = true;
       if (!f.airborne && f.takeoffArmed && gf >= c.gf_takeoff_hz) {
         f.airborne = true; f.takeoffArmed = false;
-        f.wingDrive = Math.max(f.wingDrive, clamp(0.82 + 0.18 * gf / c.gf_full_scale_hz, 0, 1));
+        f.wingDrive = Math.max(f.wingDrive, clamp(0.93 + 0.07 * gf / c.gf_full_scale_hz, 0, 1));
         f.wingPhase = 0;
       }
 
