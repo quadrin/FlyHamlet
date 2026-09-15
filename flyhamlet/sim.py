@@ -283,6 +283,7 @@ class LIFNetwork:
         self.bg_p = 0.0
         self.bg_weight = 0.0
         self.subscriptions: list[Subscription] = []
+        self._prosthesis = None  # optional; no change to the default dynamics
 
         # backend
         if backend == "auto":
@@ -381,6 +382,56 @@ class LIFNetwork:
             self.t_w = _torch.tensor(self.w, device=self.device)
         return idx
 
+    # ----------------------------------------------------------------- prosthesis API
+    def attach_prosthesis(self, prosthesis):
+        """Attach one spike-driven synthetic lobe; fly synapses remain untouched."""
+        import weakref
+        from .prosthesis import RecurrentProsthesis
+        if not isinstance(prosthesis, RecurrentProsthesis):
+            raise TypeError("expected RecurrentProsthesis")
+        if self._prosthesis is not None:
+            raise RuntimeError("detach the existing prosthesis before attaching another")
+        if prosthesis._owner is not None and prosthesis._owner() is not None:
+            raise RuntimeError("a prosthesis cannot be shared by two networks")
+        if prosthesis.n_neurons != self.n or not math.isclose(prosthesis.dt_ms, self.dt, rel_tol=0, abs_tol=1e-12):
+            raise ValueError("prosthesis neuron count/timestep does not match the network")
+        prosthesis.reset_state()
+        if self.backend == "torch":
+            self._prosthesis_t_indices = _torch.tensor(prosthesis.write_indices, device=self.device)
+        prosthesis._owner = weakref.ref(self)
+        self._prosthesis = prosthesis
+        return prosthesis
+
+    def detach_prosthesis(self):
+        """Stop future stimulation; already-delivered synaptic drive decays normally."""
+        p = self._prosthesis
+        if p is not None:
+            p._owner = None
+            p.reset_state()
+            self._prosthesis = None
+        return p
+
+    def _deliver_prosthesis(self, active=None):
+        """Synaptic slot, before reset. Output comes from a completed earlier bin."""
+        p = self._prosthesis
+        if p is None or not p.feedback_enabled:
+            return
+        # g is a voltage-equivalent drive. This discretization gives g -> drive
+        # for a nonspiking cell, independent of dt (up to floating-point error).
+        drive = np.asarray(p.drive_mV)
+        if not np.isfinite(drive).all():
+            raise FloatingPointError("nonfinite prosthetic feedback")
+        drive = np.clip(drive, -p.config.max_drive_mV, p.config.max_drive_mV)
+        values = ((1.0 - float(self.cc)) * drive[p.write_channel]).astype(self.dtype)
+        if self.backend == "torch":
+            idx = self._prosthesis_t_indices
+            values_t = _torch.as_tensor(values, device=self.device, dtype=self.t_g.dtype)
+            self.t_g.index_add_(0, idx, values_t * active[idx].to(self.t_g.dtype))
+        else:
+            idx = p.write_indices
+            keep = ~self.frozen[idx]
+            self.g[idx[keep]] += values[keep]
+
     # ----------------------------------------------------------------- spike API
     def subscribe(self, target, name: str | None = None, callback: Callable | None = None,
                   side=None) -> Subscription:
@@ -429,6 +480,8 @@ class LIFNetwork:
             spikes = self._step_numba()
         else:
             spikes = self._step_numpy()
+        if self._prosthesis is not None:
+            self._prosthesis.observe(spikes)
         for s in self.subscriptions:
             s.deliver(self.step_idx, spikes)
         self.step_idx += 1
@@ -448,6 +501,8 @@ class LIFNetwork:
             _nb_add_at(self.v, v_t, self.poisson_weight, self.frozen)
         if len(g_t):
             _nb_add_at_w(self.g, g_t, g_w, self.frozen)
+        if self._prosthesis is not None:
+            self._deliver_prosthesis()
         # reset slot
         if k:
             _nb_reset(self.v, self.g, self.rfc_left, self.rfc_steps, spikes, self.v_rst)
@@ -481,6 +536,8 @@ class LIFNetwork:
         if len(g_t):
             keep = active[g_t]
             np.add.at(self.g, g_t[keep], g_w[keep])
+        if self._prosthesis is not None:
+            self._deliver_prosthesis()
         if len(spikes):
             self.v[spikes] = self.v_rst; self.g[spikes] = 0; self.rfc_left[spikes] = self.rfc_steps[spikes]
         self.queue.append(spikes)
@@ -515,6 +572,8 @@ class LIFNetwork:
         if len(g_t):
             gt = t.as_tensor(g_t, device=self.device)
             self.t_g.index_add_(0, gt, t.as_tensor(g_w, device=self.device, dtype=self.t_g.dtype) * active[gt].to(self.t_g.dtype))
+        if self._prosthesis is not None:
+            self._deliver_prosthesis(active)
         if len(spk_t):
             self.t_v[spk_t] = float(self.v_rst); self.t_g[spk_t] = 0.0
             self.t_rfc_left[spk_t] = self.t_rfc_steps[spk_t]
@@ -553,5 +612,7 @@ class LIFNetwork:
         if seed is not None:
             self.seed = int(seed)
         self.rng = np.random.default_rng(self.seed)
+        if self._prosthesis is not None:
+            self._prosthesis.reset_state()
         if self.backend == "torch":
             self.t_v.fill_(self.v0); self.t_g.zero_(); self.t_rfc_left.zero_()
