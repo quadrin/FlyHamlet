@@ -1,0 +1,9 @@
+{
+  "cue_pairs": [
+    [{"type": "LC4", "side": "left"}, {"type": "LC4", "side": "right"}],
+    [{"type": "LPLC2", "side": "left"}, {"type": "LPLC2", "side": "right"}]
+  ],
+  "read_pool": {"super_class": ["central"]},
+  "write_pool": {"super_class": ["central"]},
+  "report_pool": {"super_class": ["descending"]}
+}
