@@ -139,8 +139,8 @@ def predict(x, w, b) -> int:
     return int(float((np.asarray(x) @ w.T + b).item()) > 1e-9)
 
 
-def run_condition(c, sim_cfg, ports, args, name, out):
-    net = LIFNetwork(c, sim_cfg, backend=args.backend, device="cpu" if args.backend == "torch" else None)
+def run_condition(c, sim_cfg, ports, args, name, out, *, network_factory=LIFNetwork):
+    net = network_factory(c, sim_cfg, backend=args.backend, device="cpu" if args.backend == "torch" else None)
     if name == "disconnected":
         # Declared null: remove every anatomical edge before freezing the graph.
         net.silence({"index": np.arange(c.n)})
